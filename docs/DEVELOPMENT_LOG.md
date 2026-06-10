@@ -43,3 +43,16 @@ Claude 对 C1 的审查结论为“有条件通过”，并指出 `db/db_schema.
 | 真实 MySQL/MariaDB 复核 | Claude 环境真实执行通过，创建 16 张表 | `docs/C1_real_show_tables_by_claude.md` |
 
 下一步应先将 C1 修复提交到 GitHub 并等待 Claude 复核确认。根据 John 的明确安排，C2 至 C5 属于系统心脏模块，人气值引擎与卡密核销建议切换到 Manus 1.6 Max 模型执行；C6 起可再切回 Lite。
+
+## 2026-06-10 C2 实现记录
+
+Claude 确认 C1 正式关闭并开出 C2 后，Manus 已在 Max 模型下完成 `PopularityService.convert` 与 `applyChange(player 直接归属)` 的 C2 实现。该实现严格限定在 C2 范围内：当请求显式指定 `targetType="player"` 和 `targetId` 时，系统完成礼物换算、写入 `popularity_ledger`、累加更新 `player_round_stats.individual_popularity` 并返回结果；`like/comment` 的场控归属逻辑未提前实现，保留至 C3。
+
+| 验证项 | 结果 | 验证物 |
+|---|---|---|
+| 礼物 1000 抖币 → +100,000 人气值 | 通过 | `docs/C2_junit_output.txt` |
+| 相同幂等键调用两次只生效一次 | 通过 | `docs/C2_junit_output.txt` |
+| 全量 H2 JUnit 测试 | 通过，`Tests run: 3, Failures: 0, Errors: 0` | `docs/C2_junit_output.txt` |
+| C2 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C2_self_check_output.txt` |
+
+C2 中统计更新采用“先确保统计行存在，再执行 `UPDATE ... SET individual_popularity = individual_popularity + ?`”的方式，避免先查询再覆盖写入导致并发不安全。下一步应提交 GitHub 并请 Claude 审查 C2。若 C2 通过，继续在 Max 模型下进入 C3。

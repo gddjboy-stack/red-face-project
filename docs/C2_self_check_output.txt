@@ -1,0 +1,14 @@
+## C2 自检命令输出
+
+### 1. 搜索 INSERT INTO popularity_ledger
+backend/redface-backend/src/main/java/com/redface/mapper/PopularityLedgerMapper.java:22:            INSERT INTO popularity_ledger (
+
+### 2. 搜索 double/float 关键字
+
+### 3. 搜索字段注入 @Autowired
+
+### 4. C2 JUnit 关键结果
+[INFO] Running com.redface.PopularityServiceC2Test
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.274 s -- in com.redface.PopularityServiceC2Test
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
