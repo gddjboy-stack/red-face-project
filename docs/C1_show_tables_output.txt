@@ -1,0 +1,17 @@
+Tables_in_redface_project
+players
+teams
+rounds
+player_round
+popularity_ledger
+player_round_stats
+team_round_stats
+pool_round_stats
+coefficient_ledger
+tokens
+photo_assets
+user_photo_collection
+suspicion_votes
+team_distribution_batches
+collect_state
+operations_log
