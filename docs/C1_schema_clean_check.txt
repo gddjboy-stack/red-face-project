@@ -1,0 +1,2 @@
+检查命令: grep -n -E '```|REFERENCES users|users 表|users table' db/db_schema.sql || true
+检查结果: 无输出，表示不存在 Markdown 代码块标记、users 外键引用或相关推断性注释。
