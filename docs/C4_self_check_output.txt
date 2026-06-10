@@ -1,0 +1,21 @@
+## C4 自检命令输出
+
+### 1. 搜索 INSERT INTO popularity_ledger
+backend/redface-backend/src/main/java/com/redface/mapper/PopularityLedgerMapper.java:22:            INSERT INTO popularity_ledger (
+
+### 2. 搜索 double/float 关键字
+
+### 3. 搜索主代码字段注入 @Autowired
+
+### 4. C4 JUnit 关键结果
+[INFO] Running com.redface.PopularityServiceC4Test
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.088 s -- in com.redface.PopularityServiceC4Test
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+### 5. 检查 computeScore 关键整数公式
+121:        long threshold = lastRoundPop * AppConstants.DECAY_THRESHOLD_RATIO / AppConstants.COEFFICIENT_BASE;
+123:            decayed = threshold + (currentPop - threshold) * AppConstants.DECAY_RATE / AppConstants.COEFFICIENT_BASE;
+127:        long finalScore = decayed * coefficient / AppConstants.COEFFICIENT_BASE;
+128:        if (finalScore < 0) {
+139:        return coefficient == null ? AppConstants.COEFFICIENT_BASE : coefficient;

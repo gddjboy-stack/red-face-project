@@ -178,4 +178,37 @@ public interface StatsMapper {
             WHERE round_id = #{roundId}
             """)
     Long findPoolPopularity(@Param("roundId") int roundId);
+
+    /**
+     * 查询指定选手当前轮次的加成系数。
+     *
+     * @param playerId 选手 ID
+     * @param roundId  轮次 ID
+     * @return 当前加成系数；无记录时返回 null
+     */
+    @Select("""
+            SELECT coefficient
+            FROM player_round_stats
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    Integer findPlayerCoefficient(@Param("playerId") int playerId, @Param("roundId") int roundId);
+
+    /**
+     * 查询指定选手当前 round_id 之前最近一轮的个人人气值。
+     *
+     * @param playerId 选手 ID
+     * @param roundId  当前轮次 ID
+     * @return 上一轮个人人气值；无记录时返回 null
+     */
+    @Select("""
+            SELECT individual_popularity
+            FROM player_round_stats
+            WHERE player_id = #{playerId}
+              AND round_id < #{roundId}
+            ORDER BY round_id DESC
+            LIMIT 1
+            """)
+    Long findPreviousRoundIndividualPopularity(@Param("playerId") int playerId, @Param("roundId") int roundId);
 }
+

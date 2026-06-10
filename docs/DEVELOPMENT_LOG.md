@@ -73,3 +73,19 @@ Claude 审查确认 C2 通过并开出 C3 后，Manus 已继续在 Max 模型下
 | C3 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C3_self_check_output.txt` |
 
 下一步应提交 GitHub 并请 Claude 审查 C3。若 C3 通过，继续在 Max 模型下进入 C4：`computeScore` 衰减与系数积分计算。
+
+## 2026-06-10 C4 实现记录
+
+Claude 审查确认 C3 通过并开出 C4 后，Manus 已继续在 Max 模型下完成 `PopularityService.computeScore` 的衰减与系数积分计算。C4 实现严格使用整数运算，读取当前轮 `individual_popularity`、当前轮 `coefficient` 以及当前轮之前最近一轮的 `individual_popularity`，根据阈值判断是否触发衰减，并在最终积分小于 0 时返回 0。
+
+| 验证项 | 结果 | 验证物 |
+|---|---|---|
+| 上轮 10 万、本轮 20 万 → 衰减后 15.5 万 | 通过 | `docs/C4_junit_output.txt` |
+| 上轮为 0 或首轮无上轮记录 → 不衰减 | 通过 | `docs/C4_junit_output.txt` |
+| 本轮恰好等于 1.5 倍阈值 → 不衰减 | 通过 | `docs/C4_junit_output.txt` |
+| coefficient=110 时系数生效 | 通过 | `docs/C4_junit_output.txt` |
+| 理论负分场景最终积分归 0 | 通过 | `docs/C4_junit_output.txt` |
+| 全量 H2 JUnit 测试 | 通过，`Tests run: 12, Failures: 0, Errors: 0` | `docs/C4_junit_output.txt` |
+| C4 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C4_self_check_output.txt` |
+
+下一步应提交 GitHub 并请 Claude 审查 C4。若 C4 通过，继续在 Max 模型下进入 C5：`TokenService.redeem` 卡密核销全流程。

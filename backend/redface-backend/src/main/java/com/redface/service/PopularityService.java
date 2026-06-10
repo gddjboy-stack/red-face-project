@@ -105,12 +105,38 @@ public class PopularityService {
      * @return 积分计算结果
      */
     public ScoreResult computeScore(int playerId, int roundId) {
-        // TODO: 严格按上述公式和边界实现
-        // 提示: long threshold = lastRoundPop * AppConstants.DECAY_THRESHOLD_RATIO / 100;
-        //      if (lastRoundPop > 0 && currentPop > threshold) {
-        //          decayed = threshold + (currentPop - threshold) * AppConstants.DECAY_RATE / 100;
-        //      }
-        return null;
+        if (playerId <= 0) {
+            throw new IllegalArgumentException("playerId必须为正数");
+        }
+        if (roundId <= 0) {
+            throw new IllegalArgumentException("roundId必须为正数");
+        }
+
+        long currentPop = valueOrZero(statsMapper.findPlayerIndividualPopularity(playerId, roundId));
+        long lastRoundPop = valueOrZero(statsMapper.findPreviousRoundIndividualPopularity(playerId, roundId));
+        int coefficient = coefficientOrBase(statsMapper.findPlayerCoefficient(playerId, roundId));
+
+        long decayed = currentPop;
+        boolean decayApplied = false;
+        long threshold = lastRoundPop * AppConstants.DECAY_THRESHOLD_RATIO / AppConstants.COEFFICIENT_BASE;
+        if (lastRoundPop > 0 && currentPop > threshold) {
+            decayed = threshold + (currentPop - threshold) * AppConstants.DECAY_RATE / AppConstants.COEFFICIENT_BASE;
+            decayApplied = true;
+        }
+
+        long finalScore = decayed * coefficient / AppConstants.COEFFICIENT_BASE;
+        if (finalScore < 0) {
+            finalScore = 0;
+        }
+        return new ScoreResult(currentPop, coefficient, decayed, finalScore, decayApplied);
+    }
+
+    private long valueOrZero(Long value) {
+        return value == null ? 0L : value;
+    }
+
+    private int coefficientOrBase(Integer coefficient) {
+        return coefficient == null ? AppConstants.COEFFICIENT_BASE : coefficient;
     }
 
     private void validateRequest(PopularityChangeRequest req) {
