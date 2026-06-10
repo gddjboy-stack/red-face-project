@@ -41,4 +41,10 @@ public final class AppConstants {
     public static final String TOKEN_PREFIX = "RFZJ";
     /** 卡密字符集(排除0/1/I/L/O) */
     public static final String TOKEN_CHARSET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+    /** 卡密随机段长度 */
+    public static final int TOKEN_SECTION_LENGTH = 4;
+    /** 卡密随机段数量 */
+    public static final int TOKEN_SECTION_COUNT = 3;
+    /** 卡密总长度 (前缀-段1-段2-段3) */
+    public static final int TOKEN_TOTAL_LENGTH = 19; // RFZJ-XXXX-XXXX-XXXX = 4 + 3*4 + 3 (hyphens) = 19
 }

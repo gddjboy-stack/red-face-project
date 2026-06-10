@@ -207,8 +207,8 @@ class TokenServiceC5Test {
 
     private void insertToken(String tokenId, String photoAssetId) {
         jdbcTemplate.update("""
-                INSERT INTO tokens (token_id, player_id, points, photo_asset_id, product_sku, status)
-                VALUES (?, ?, ?, ?, ?, 'unused')
-                """, tokenId, PLAYER_ID, TOKEN_POINTS, photoAssetId, "sku_test");
+                INSERT INTO tokens (token_id, player_id, points, photo_asset_id, product_sku, status, created_at)
+                VALUES (?, ?, ?, ?, ?, 'unused', ?)
+                """, tokenId, PLAYER_ID, TOKEN_POINTS, photoAssetId, "sku_test", LocalDateTime.now());
     }
 }

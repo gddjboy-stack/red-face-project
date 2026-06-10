@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.redface.PopularityServiceC3Test
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.025 s -- in com.redface.PopularityServiceC3Test
