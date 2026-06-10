@@ -1,0 +1,20 @@
+## C3 自检命令输出
+
+### 1. 搜索 INSERT INTO popularity_ledger
+backend/redface-backend/src/main/java/com/redface/mapper/PopularityLedgerMapper.java:22:            INSERT INTO popularity_ledger (
+
+### 2. 搜索 double/float 关键字
+
+### 3. 搜索主代码字段注入 @Autowired
+
+### 4. C3 JUnit 关键结果
+[INFO] Running com.redface.PopularityServiceC3Test
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.155 s -- in com.redface.PopularityServiceC3Test
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+### 5. 检查 rawValue P0 修复关键代码
+124:            throw new IllegalArgumentException("rawValue不能为0");
+126:        boolean negativeAllowed = SOURCE_MANUAL.equals(req.getSource()) || SOURCE_REFUND.equals(req.getSource());
+127:        if (!negativeAllowed && req.getRawValue() < 0) {
+128:            throw new IllegalArgumentException("该source的rawValue必须为正数: " + req.getSource());

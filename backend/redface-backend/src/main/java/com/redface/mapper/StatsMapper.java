@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 /**
- * 各类人气统计表 Mapper。C2 仅实现 player 直接归属所需的 player_round_stats 操作。
+ * 各类人气统计表 Mapper。统计更新必须使用 UPDATE ... SET x = x + ? 的累加写法。
  */
 @Mapper
 public interface StatsMapper {
@@ -45,6 +45,24 @@ public interface StatsMapper {
                                             @Param("popularityValue") long popularityValue);
 
     /**
+     * 按累加方式更新选手卧底人气值。
+     *
+     * @param playerId        选手 ID
+     * @param roundId         轮次 ID
+     * @param popularityValue 本次增加的人气值
+     * @return 受影响行数
+     */
+    @Update("""
+            UPDATE player_round_stats
+            SET spy_popularity = spy_popularity + #{popularityValue}
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    int incrementPlayerSpyPopularity(@Param("playerId") int playerId,
+                                     @Param("roundId") int roundId,
+                                     @Param("popularityValue") long popularityValue);
+
+    /**
      * 查询指定选手轮次的个人人气值。
      *
      * @param playerId 选手 ID
@@ -58,4 +76,106 @@ public interface StatsMapper {
               AND round_id = #{roundId}
             """)
     Long findPlayerIndividualPopularity(@Param("playerId") int playerId, @Param("roundId") int roundId);
+
+    /**
+     * 查询指定选手轮次的卧底人气值。
+     *
+     * @param playerId 选手 ID
+     * @param roundId  轮次 ID
+     * @return 当前卧底人气值
+     */
+    @Select("""
+            SELECT COALESCE(spy_popularity, 0)
+            FROM player_round_stats
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    Long findPlayerSpyPopularity(@Param("playerId") int playerId, @Param("roundId") int roundId);
+
+    /**
+     * 确保团队轮次统计行存在。若已存在，则保持原值不变。
+     *
+     * @param teamId  团队 ID
+     * @param roundId 轮次 ID
+     * @return 受影响行数
+     */
+    @Insert("""
+            INSERT INTO team_round_stats (team_id, round_id, team_popularity, distributed_popularity)
+            VALUES (#{teamId}, #{roundId}, 0, 0)
+            ON DUPLICATE KEY UPDATE team_id = team_id
+            """)
+    int ensureTeamRoundStats(@Param("teamId") int teamId, @Param("roundId") int roundId);
+
+    /**
+     * 按累加方式更新团队池人气值。
+     *
+     * @param teamId          团队 ID
+     * @param roundId         轮次 ID
+     * @param popularityValue 本次增加的人气值
+     * @return 受影响行数
+     */
+    @Update("""
+            UPDATE team_round_stats
+            SET team_popularity = team_popularity + #{popularityValue}
+            WHERE team_id = #{teamId}
+              AND round_id = #{roundId}
+            """)
+    int incrementTeamPopularity(@Param("teamId") int teamId,
+                                @Param("roundId") int roundId,
+                                @Param("popularityValue") long popularityValue);
+
+    /**
+     * 查询指定团队轮次的人气池数值。
+     *
+     * @param teamId  团队 ID
+     * @param roundId 轮次 ID
+     * @return 当前团队池人气值
+     */
+    @Select("""
+            SELECT COALESCE(team_popularity, 0)
+            FROM team_round_stats
+            WHERE team_id = #{teamId}
+              AND round_id = #{roundId}
+            """)
+    Long findTeamPopularity(@Param("teamId") int teamId, @Param("roundId") int roundId);
+
+    /**
+     * 确保赛事总池轮次统计行存在。若已存在，则保持原值不变。
+     *
+     * @param roundId 轮次 ID
+     * @return 受影响行数
+     */
+    @Insert("""
+            INSERT INTO pool_round_stats (round_id, pool_popularity)
+            VALUES (#{roundId}, 0)
+            ON DUPLICATE KEY UPDATE round_id = round_id
+            """)
+    int ensurePoolRoundStats(@Param("roundId") int roundId);
+
+    /**
+     * 按累加方式更新赛事总池人气值。
+     *
+     * @param roundId         轮次 ID
+     * @param popularityValue 本次增加的人气值
+     * @return 受影响行数
+     */
+    @Update("""
+            UPDATE pool_round_stats
+            SET pool_popularity = pool_popularity + #{popularityValue}
+            WHERE round_id = #{roundId}
+            """)
+    int incrementPoolPopularity(@Param("roundId") int roundId, @Param("popularityValue") long popularityValue);
+
+    /**
+     * 查询指定轮次的赛事总池人气值。
+     *
+     * @param roundId 轮次 ID
+     * @return 当前赛事总池人气值
+     */
+    @Select("""
+            SELECT COALESCE(pool_popularity, 0)
+            FROM pool_round_stats
+            WHERE round_id = #{roundId}
+            """)
+    Long findPoolPopularity(@Param("roundId") int roundId);
 }

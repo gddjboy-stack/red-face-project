@@ -4,6 +4,7 @@ import com.redface.config.AppConstants;
 import com.redface.dto.PopularityChangeRequest;
 import com.redface.dto.PopularityChangeResult;
 import com.redface.dto.ScoreResult;
+import com.redface.entity.CollectState;
 import com.redface.entity.PopularityLedgerEntity;
 import com.redface.mapper.PopularityLedgerMapper;
 import com.redface.mapper.StatsMapper;
@@ -21,6 +22,13 @@ import org.springframework.util.StringUtils;
 public class PopularityService {
 
     private static final String TARGET_PLAYER = "player";
+    private static final String TARGET_TEAM = "team";
+    private static final String TARGET_SPY = "spy";
+    private static final String TARGET_POOL = "pool";
+    private static final String SOURCE_LIKE = "like";
+    private static final String SOURCE_COMMENT = "comment";
+    private static final String SOURCE_MANUAL = "manual";
+    private static final String SOURCE_REFUND = "refund";
 
     private final PopularityLedgerMapper ledgerMapper;
     private final StatsMapper statsMapper;
@@ -51,7 +59,7 @@ public class PopularityService {
         // === 第2步:归属判定 ===
         // TODO: req里指定了targetType就用指定的;
         //       like/comment类(req.targetType==null) → 查collectStateService.getCurrent()
-        Target target = resolveTarget(req);
+        ResolvedTarget target = resolveTarget(req);
 
         // === 第3步:写流水(幂等) ===
         try {
@@ -64,10 +72,10 @@ public class PopularityService {
         // TODO: 按target_type更新对应stats表
         //       必须用 UPDATE ... SET x = x + ? 的累加写法
         //       禁止先SELECT再SET(并发不安全)
-        updateStats(target, req.getRoundId(), popularityValue);
+        updateStats(target, popularityValue);
 
         // === 第5步:返回 ===
-        return PopularityChangeResult.success(popularityValue, target.targetType(), target.targetId(), req.getRoundId());
+        return PopularityChangeResult.success(popularityValue, target.targetType(), target.targetId(), target.roundId());
     }
 
     /** 换算逻辑(已写好,不要改) */
@@ -112,36 +120,58 @@ public class PopularityService {
         if (!StringUtils.hasText(req.getSource())) {
             throw new IllegalArgumentException("source不能为空");
         }
-        if (req.getRawValue() <= 0) {
-            throw new IllegalArgumentException("rawValue必须为正数");
+        if (req.getRawValue() == 0) {
+            throw new IllegalArgumentException("rawValue不能为0");
         }
-        if (req.getRoundId() == null) {
-            throw new IllegalArgumentException("roundId不能为空");
+        boolean negativeAllowed = SOURCE_MANUAL.equals(req.getSource()) || SOURCE_REFUND.equals(req.getSource());
+        if (!negativeAllowed && req.getRawValue() < 0) {
+            throw new IllegalArgumentException("该source的rawValue必须为正数: " + req.getSource());
         }
         if (!StringUtils.hasText(req.getIdempotencyKey())) {
             throw new IllegalArgumentException("idempotencyKey不能为空");
         }
     }
 
-    private Target resolveTarget(PopularityChangeRequest req) {
+    private ResolvedTarget resolveTarget(PopularityChangeRequest req) {
         if (StringUtils.hasText(req.getTargetType())) {
-            if (req.getTargetId() == null) {
+            Integer roundId = requireRoundId(req.getRoundId());
+            if (!TARGET_POOL.equals(req.getTargetType()) && req.getTargetId() == null) {
                 throw new IllegalArgumentException("targetId不能为空");
             }
-            return new Target(req.getTargetType(), req.getTargetId());
+            return new ResolvedTarget(req.getTargetType(), req.getTargetId(), roundId);
         }
-        collectStateService.getCurrent();
-        throw new UnsupportedOperationException("C2仅实现player直接归属; like/comment场控归属将在C3实现");
+        if (!SOURCE_LIKE.equals(req.getSource()) && !SOURCE_COMMENT.equals(req.getSource())) {
+            throw new IllegalArgumentException("只有like/comment允许通过场控状态自动归属");
+        }
+        CollectState current = collectStateService.getCurrent();
+        if (current == null) {
+            throw new IllegalStateException("当前场控状态未设置");
+        }
+        if (!StringUtils.hasText(current.getMode())) {
+            throw new IllegalStateException("当前场控mode为空");
+        }
+        if (!TARGET_POOL.equals(current.getMode()) && current.getTargetId() == null) {
+            throw new IllegalStateException("当前场控targetId为空");
+        }
+        Integer roundId = req.getRoundId() == null ? current.getRoundId() : req.getRoundId();
+        return new ResolvedTarget(current.getMode(), current.getTargetId(), requireRoundId(roundId));
     }
 
-    private PopularityLedgerEntity buildLedger(PopularityChangeRequest req, Target target, long popularityValue) {
+    private Integer requireRoundId(Integer roundId) {
+        if (roundId == null) {
+            throw new IllegalArgumentException("roundId不能为空");
+        }
+        return roundId;
+    }
+
+    private PopularityLedgerEntity buildLedger(PopularityChangeRequest req, ResolvedTarget target, long popularityValue) {
         PopularityLedgerEntity ledger = new PopularityLedgerEntity();
         ledger.setTargetType(target.targetType());
         ledger.setTargetId(target.targetId());
         ledger.setSource(req.getSource());
         ledger.setRawValue(req.getRawValue());
         ledger.setPopularityValue(popularityValue);
-        ledger.setRoundId(req.getRoundId());
+        ledger.setRoundId(target.roundId());
         ledger.setIdempotencyKey(req.getIdempotencyKey());
         ledger.setDistributionBatchId(req.getDistributionBatchId());
         ledger.setOperatorId(req.getOperatorId());
@@ -151,17 +181,58 @@ public class PopularityService {
         return ledger;
     }
 
-    private void updateStats(Target target, int roundId, long popularityValue) {
-        if (!TARGET_PLAYER.equals(target.targetType())) {
-            throw new UnsupportedOperationException("C2仅实现player直接归属统计更新");
-        }
-        statsMapper.ensurePlayerRoundStats(target.targetId(), roundId);
-        int updatedRows = statsMapper.incrementPlayerIndividualPopularity(target.targetId(), roundId, popularityValue);
-        if (updatedRows != 1) {
-            throw new IllegalStateException("更新player_round_stats失败");
+    private void updateStats(ResolvedTarget target, long popularityValue) {
+        switch (target.targetType()) {
+            case TARGET_PLAYER -> updatePlayerStats(target, popularityValue);
+            case TARGET_SPY -> updateSpyStats(target, popularityValue);
+            case TARGET_TEAM -> updateTeamStats(target, popularityValue);
+            case TARGET_POOL -> updatePoolStats(target, popularityValue);
+            default -> throw new IllegalArgumentException("未知targetType: " + target.targetType());
         }
     }
 
-    private record Target(String targetType, int targetId) {
+    private void updatePlayerStats(ResolvedTarget target, long popularityValue) {
+        int playerId = requireTargetId(target);
+        statsMapper.ensurePlayerRoundStats(playerId, target.roundId());
+        int updatedRows = statsMapper.incrementPlayerIndividualPopularity(playerId, target.roundId(), popularityValue);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("更新player_round_stats.individual_popularity失败");
+        }
+    }
+
+    private void updateSpyStats(ResolvedTarget target, long popularityValue) {
+        int playerId = requireTargetId(target);
+        statsMapper.ensurePlayerRoundStats(playerId, target.roundId());
+        int updatedRows = statsMapper.incrementPlayerSpyPopularity(playerId, target.roundId(), popularityValue);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("更新player_round_stats.spy_popularity失败");
+        }
+    }
+
+    private void updateTeamStats(ResolvedTarget target, long popularityValue) {
+        int teamId = requireTargetId(target);
+        statsMapper.ensureTeamRoundStats(teamId, target.roundId());
+        int updatedRows = statsMapper.incrementTeamPopularity(teamId, target.roundId(), popularityValue);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("更新team_round_stats.team_popularity失败");
+        }
+    }
+
+    private void updatePoolStats(ResolvedTarget target, long popularityValue) {
+        statsMapper.ensurePoolRoundStats(target.roundId());
+        int updatedRows = statsMapper.incrementPoolPopularity(target.roundId(), popularityValue);
+        if (updatedRows != 1) {
+            throw new IllegalStateException("更新pool_round_stats.pool_popularity失败");
+        }
+    }
+
+    private int requireTargetId(ResolvedTarget target) {
+        if (target.targetId() == null) {
+            throw new IllegalArgumentException("targetId不能为空");
+        }
+        return target.targetId();
+    }
+
+    private record ResolvedTarget(String targetType, Integer targetId, int roundId) {
     }
 }

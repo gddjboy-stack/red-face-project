@@ -56,3 +56,20 @@ Claude 确认 C1 正式关闭并开出 C2 后，Manus 已在 Max 模型下完成
 | C2 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C2_self_check_output.txt` |
 
 C2 中统计更新采用“先确保统计行存在，再执行 `UPDATE ... SET individual_popularity = individual_popularity + ?`”的方式，避免先查询再覆盖写入导致并发不安全。下一步应提交 GitHub 并请 Claude 审查 C2。若 C2 通过，继续在 Max 模型下进入 C3。
+
+## 2026-06-10 C3 实现记录
+
+Claude 审查确认 C2 通过并开出 C3 后，Manus 已继续在 Max 模型下完成 C3。C3 的核心变化是将 `like/comment` 总增量从 C2 的“暂不支持”推进为“按当前场控状态归属”，并补齐 `CollectStateService` 对 `collect_state` 单行表和 `operations_log` 操作审计日志的写入能力。
+
+本次也合并修复了 C2 审查中指出的 P0 问题：`PopularityService.validateRequest()` 不再一刀切拒绝 `rawValue <= 0`，而是改为所有 source 均拒绝 `rawValue=0`，`manual/refund` 允许负值，`gift/like/comment/token/team_distribution` 等来源仍要求正值。该修复已通过 `manual rawValue=-5000` 的 JUnit 测试验证。
+
+| 验证项 | 结果 | 验证物 |
+|---|---|---|
+| team 场控下 like 增量进入 `team_round_stats` | 通过 | `docs/C3_junit_output.txt` |
+| pool 场控下 comment 增量进入 `pool_round_stats` | 通过 | `docs/C3_junit_output.txt` |
+| manual 负值 `-5000` 正常走通 | 通过 | `docs/C3_junit_output.txt` |
+| 场控切换写入 `operations_log` | 通过 | `docs/C3_junit_output.txt` |
+| 全量 H2 JUnit 测试 | 通过，`Tests run: 7, Failures: 0, Errors: 0` | `docs/C3_junit_output.txt` |
+| C3 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C3_self_check_output.txt` |
+
+下一步应提交 GitHub 并请 Claude 审查 C3。若 C3 通过，继续在 Max 模型下进入 C4：`computeScore` 衰减与系数积分计算。
