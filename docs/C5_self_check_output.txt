@@ -1,0 +1,25 @@
+## C5 自检命令输出
+
+### 1. 搜索 INSERT INTO popularity_ledger
+backend/redface-backend/src/main/java/com/redface/mapper/PopularityLedgerMapper.java:22:            INSERT INTO popularity_ledger (
+
+### 2. 搜索 double/float 关键字
+
+### 3. 搜索主代码字段注入 @Autowired
+
+### 4. C5 JUnit 关键结果
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.076 s -- in com.redface.PopularityServiceC4Test
+[INFO] Running com.redface.TokenServiceC5Test
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.103 s -- in com.redface.TokenServiceC5Test
+[INFO] Tests run: 17, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+
+### 5. 检查 TokenService 原子抢占调用顺序关键代码
+72:        Integer roundId = roundService.getCurrentAccrualRoundId();
+74:            return RedeemResult.fail("round_not_available", "当前无可用轮次,请联系工作人员");
+78:        int rows = tokenMapper.markUsedIfUnused(token, userId, normalizeRedeemSource(source));
+81:            TokenEntity existing = tokenMapper.findById(token);
+88:        TokenEntity t = tokenMapper.findById(token);
+100:        req.setIdempotencyKey("token_" + token);
+
+### 6. 搜索 TokenService 中是否存在先 SELECT 再 UPDATE 的代码形态

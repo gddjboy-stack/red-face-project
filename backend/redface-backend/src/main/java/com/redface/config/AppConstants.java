@@ -22,6 +22,10 @@ public final class AppConstants {
     /** 队员PK获胜 +0.05 */
     public static final int COEFFICIENT_PK_WIN = 5;
 
+    // ===== 百分比基数 =====
+    /** 百分比计算基数: 100=100% */
+    public static final int PERCENT_BASE = 100;
+
     // ===== 衰减规则 =====
     /** 衰减阈值倍数×100: 150=上轮的1.5倍 */
     public static final int DECAY_THRESHOLD_RATIO = 150;

@@ -118,9 +118,9 @@ public class PopularityService {
 
         long decayed = currentPop;
         boolean decayApplied = false;
-        long threshold = lastRoundPop * AppConstants.DECAY_THRESHOLD_RATIO / AppConstants.COEFFICIENT_BASE;
+        long threshold = lastRoundPop * AppConstants.DECAY_THRESHOLD_RATIO / AppConstants.PERCENT_BASE;
         if (lastRoundPop > 0 && currentPop > threshold) {
-            decayed = threshold + (currentPop - threshold) * AppConstants.DECAY_RATE / AppConstants.COEFFICIENT_BASE;
+            decayed = threshold + (currentPop - threshold) * AppConstants.DECAY_RATE / AppConstants.PERCENT_BASE;
             decayApplied = true;
         }
 

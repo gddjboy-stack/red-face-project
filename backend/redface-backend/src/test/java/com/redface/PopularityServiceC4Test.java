@@ -71,7 +71,7 @@ class PopularityServiceC4Test {
 
         assertThat(result.getPopularity()).isEqualTo(200_000L);
         assertThat(result.getCoefficient()).isEqualTo(100);
-        assertThat(result.getScoreBeforeDecay()).isEqualTo(155_000L);
+        assertThat(result.getDecayedPopularity()).isEqualTo(155_000L);
         assertThat(result.getScoreFinal()).isEqualTo(155_000L);
         assertThat(result.isDecayApplied()).isTrue();
     }
@@ -83,7 +83,7 @@ class PopularityServiceC4Test {
     void previousZeroOrNoPreviousRecordShouldNotApplyDecay() {
         insertPlayerStats(1, 80_000L, 100);
         ScoreResult noPrevious = popularityService.computeScore(PLAYER_ID, 1);
-        assertThat(noPrevious.getScoreBeforeDecay()).isEqualTo(80_000L);
+        assertThat(noPrevious.getDecayedPopularity()).isEqualTo(80_000L);
         assertThat(noPrevious.getScoreFinal()).isEqualTo(80_000L);
         assertThat(noPrevious.isDecayApplied()).isFalse();
 
@@ -91,7 +91,7 @@ class PopularityServiceC4Test {
         insertPlayerStats(1, 0L, 100);
         insertPlayerStats(2, 120_000L, 100);
         ScoreResult previousZero = popularityService.computeScore(PLAYER_ID, 2);
-        assertThat(previousZero.getScoreBeforeDecay()).isEqualTo(120_000L);
+        assertThat(previousZero.getDecayedPopularity()).isEqualTo(120_000L);
         assertThat(previousZero.getScoreFinal()).isEqualTo(120_000L);
         assertThat(previousZero.isDecayApplied()).isFalse();
     }
@@ -106,7 +106,7 @@ class PopularityServiceC4Test {
 
         ScoreResult result = popularityService.computeScore(PLAYER_ID, 2);
 
-        assertThat(result.getScoreBeforeDecay()).isEqualTo(150_000L);
+        assertThat(result.getDecayedPopularity()).isEqualTo(150_000L);
         assertThat(result.getScoreFinal()).isEqualTo(150_000L);
         assertThat(result.isDecayApplied()).isFalse();
     }
@@ -122,7 +122,7 @@ class PopularityServiceC4Test {
         ScoreResult result = popularityService.computeScore(PLAYER_ID, 2);
 
         assertThat(result.getCoefficient()).isEqualTo(110);
-        assertThat(result.getScoreBeforeDecay()).isEqualTo(155_000L);
+        assertThat(result.getDecayedPopularity()).isEqualTo(155_000L);
         assertThat(result.getScoreFinal()).isEqualTo(170_500L);
         assertThat(result.isDecayApplied()).isTrue();
     }
@@ -138,7 +138,7 @@ class PopularityServiceC4Test {
         ScoreResult result = popularityService.computeScore(PLAYER_ID, 2);
 
         assertThat(result.getPopularity()).isEqualTo(-5_000L);
-        assertThat(result.getScoreBeforeDecay()).isEqualTo(-5_000L);
+        assertThat(result.getDecayedPopularity()).isEqualTo(-5_000L);
         assertThat(result.getScoreFinal()).isZero();
         assertThat(result.isDecayApplied()).isFalse();
     }

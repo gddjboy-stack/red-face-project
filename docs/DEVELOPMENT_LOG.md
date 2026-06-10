@@ -89,3 +89,21 @@ Claude 审查确认 C3 通过并开出 C4 后，Manus 已继续在 Max 模型下
 | C4 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C4_self_check_output.txt` |
 
 下一步应提交 GitHub 并请 Claude 审查 C4。若 C4 通过，继续在 Max 模型下进入 C5：`TokenService.redeem` 卡密核销全流程。
+
+## 2026-06-10 C5 实现记录
+
+Claude 对 C5 卡密核销 `roundId` 来源作出方案 E 裁定后，Manus 已按裁定继续在 Max 模型下完成 `TokenService.redeem` 全流程。C5 不再使用 `collect_state.round_id` 作为异步卡密核销入账轮次，而是新增 `RoundService.getCurrentAccrualRoundId()`：优先取 `status='active'` 的最新轮次；若无 active，则取 `status='upcoming'` 的最早轮次；若两者均不存在，核销返回 `round_not_available` 且卡密保持 `unused`。
+
+本次同步完成 C4 审查提出的 P1 修复：`ScoreResult.scoreBeforeDecay` 已改名为 `decayedPopularity`，并新增 `AppConstants.PERCENT_BASE`，衰减百分比计算使用 `PERCENT_BASE`，系数计算继续使用 `COEFFICIENT_BASE`。C5 核销流程严格遵循“输入规范化 → 防爆破检查 → 轮次预检查 → 原子抢占 → 人气入账 → 写真收藏”的顺序，避免无可用轮次时烧掉卡密。
+
+| 验证项 | 结果 | 验证物 |
+|---|---|---|
+| 正常核销：status 变 used、人气值入账、写真自动收藏 | 通过 | `docs/C5_junit_output.txt` |
+| 重复核销：第二次 already_used，人气值不重复增加 | 通过 | `docs/C5_junit_output.txt` |
+| 并发核销：两个线程同时核销，有且只有一个成功 | 通过 | `docs/C5_junit_output.txt` |
+| 防爆破：连续失败 5 次后第 6 次 locked | 通过 | `docs/C5_junit_output.txt` |
+| 无可用轮次：round_not_available 且卡密未消耗 | 通过 | `docs/C5_junit_output.txt` |
+| 全量 H2 JUnit 测试 | 通过，`Tests run: 17, Failures: 0, Errors: 0` | `docs/C5_junit_output.txt` |
+| C5 自检 | 通过，未发现 `double/float` 和主代码字段注入 | `docs/C5_self_check_output.txt` |
+
+C5 完成后，C2~C5 的 Max 核心阶段已覆盖人气引擎、场控归属、积分衰减与卡密核销并发安全。下一步应提交 GitHub 并请 Claude 审查 C5；若通过，按 John 的安排 C6 起可切回 Lite 模型。
