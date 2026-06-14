@@ -2,9 +2,10 @@ package com.redface.service.impl;
 
 import com.redface.config.AppConstants;
 import com.redface.model.Token;
-import com.redface.repository.TokenRepository;
+import com.redface.mapper.TokenMapper;
+import com.redface.entity.TokenEntity;
 import com.redface.service.TokenGeneratorService;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -19,14 +20,17 @@ import java.util.stream.Collectors;
 @Service
 public class TokenGeneratorServiceImpl implements TokenGeneratorService {
 
-    @Autowired
-    private TokenRepository tokenRepository;
+    private final TokenMapper tokenMapper;
+
+    public TokenGeneratorServiceImpl(TokenMapper tokenMapper) {
+        this.tokenMapper = tokenMapper;
+    }
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
     @Override
     public List<Token> generateBatch(int count, int playerId, long points, String photoAssetId, String productSku) {
-        String aqisoBatchId = "BATCH-" + System.currentTimeMillis();
+        String aqisoBatchId = "BATCH-" + System.currentTimeMillis() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
         List<Token> generatedTokens = new ArrayList<>();
         Set<String> uniqueTokenIds = new HashSet<>();
 
@@ -34,7 +38,7 @@ public class TokenGeneratorServiceImpl implements TokenGeneratorService {
             String tokenId;
             do {
                 tokenId = generateUniqueToken();
-            } while (uniqueTokenIds.contains(tokenId) || tokenRepository.existsByTokenId(tokenId));
+            } while (uniqueTokenIds.contains(tokenId) || tokenMapper.existsByTokenId(tokenId));
             uniqueTokenIds.add(tokenId);
 
             Token token = new Token();
@@ -49,12 +53,39 @@ public class TokenGeneratorServiceImpl implements TokenGeneratorService {
             generatedTokens.add(token);
         }
 
-        return tokenRepository.saveAll(generatedTokens);
+        List<TokenEntity> tokenEntities = generatedTokens.stream()
+                .map(token -> {
+                    TokenEntity entity = new TokenEntity();
+                    entity.setTokenId(token.getTokenId());
+                    entity.setPlayerId(token.getPlayerId());
+                    entity.setPoints(token.getPoints());
+                    entity.setPhotoAssetId(token.getPhotoAssetId());
+                    entity.setProductSku(token.getProductSku());
+                    entity.setAqisoBatchId(token.getAqisoBatchId());
+                    entity.setStatus(token.getStatus());
+                    entity.setCreatedAt(token.getCreatedAt());
+                    return entity;
+                }).collect(Collectors.toList());
+        tokenMapper.insertBatch(tokenEntities);
+        return generatedTokens;
     }
 
     @Override
     public String exportBatch(String batchId) {
-        List<Token> tokens = tokenRepository.findByAqisoBatchId(batchId);
+        List<TokenEntity> tokenEntities = tokenMapper.findByAqisoBatchId(batchId);
+        List<Token> tokens = tokenEntities.stream()
+                .map(entity -> {
+                    Token token = new Token();
+                    token.setTokenId(entity.getTokenId());
+                    token.setPlayerId(entity.getPlayerId());
+                    token.setPoints(entity.getPoints());
+                    token.setPhotoAssetId(entity.getPhotoAssetId());
+                    token.setProductSku(entity.getProductSku());
+                    token.setAqisoBatchId(entity.getAqisoBatchId());
+                    token.setStatus(entity.getStatus());
+                    token.setCreatedAt(entity.getCreatedAt());
+                    return token;
+                }).collect(Collectors.toList());
         if (tokens.isEmpty()) {
             return "No tokens found for batchId: " + batchId;
         }

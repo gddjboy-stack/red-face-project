@@ -16,6 +16,7 @@ public class TokenEntity {
     private String orderId;
     private String userId;
     private String redeemSource;
+    private LocalDateTime createdAt;
     private LocalDateTime usedAt;
 
     public String getTokenId() {
@@ -96,6 +97,14 @@ public class TokenEntity {
 
     public void setRedeemSource(String redeemSource) {
         this.redeemSource = redeemSource;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public LocalDateTime getUsedAt() {

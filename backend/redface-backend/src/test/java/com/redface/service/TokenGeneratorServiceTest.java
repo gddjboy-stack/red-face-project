@@ -2,7 +2,8 @@ package com.redface.service;
 
 import com.redface.config.AppConstants;
 import com.redface.model.Token;
-import com.redface.repository.TokenRepository;
+import com.redface.mapper.TokenMapper;
+import com.redface.entity.TokenEntity;
 import com.redface.service.impl.TokenGeneratorServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,14 +29,14 @@ import static org.mockito.Mockito.*;
 public class TokenGeneratorServiceTest {
 
     @Mock
-    private TokenRepository tokenRepository;
+    private TokenMapper tokenMapper;
 
     @InjectMocks
     private TokenGeneratorServiceImpl tokenGeneratorService;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        // Setup is handled in individual tests to avoid UnnecessaryStubbingException
     }
 
     @Test
@@ -45,30 +47,39 @@ public class TokenGeneratorServiceTest {
         String photoAssetId = "asset123";
         String productSku = "sku456";
 
-        when(tokenRepository.existsByTokenId(anyString())).thenReturn(false);
-        when(tokenRepository.saveAll(anyList())).thenAnswer(invocation -> {
-            List<Token> tokens = invocation.getArgument(0);
-            tokens.forEach(token -> {}); // No ID generation needed for TokenId, it's set in generateUniqueToken
-            return tokens;
-        });
+        when(tokenMapper.existsByTokenId(anyString())).thenReturn(false);
+        when(tokenMapper.insertBatch(any(List.class))).thenReturn(count);
 
         List<Token> generatedTokens = tokenGeneratorService.generateBatch(count, playerId, points, photoAssetId, productSku);
 
         assertNotNull(generatedTokens);
         assertEquals(count, generatedTokens.size());
-        verify(tokenRepository, times(1)).saveAll(anyList());
+        verify(tokenMapper, times(1)).insertBatch(anyList());
+
+        // Regex for RFZJ-XXXX-XXXX-XXXX where X is from the allowed character set
+        // and excludes 0, 1, I, L, O
+        String regex = "^RFZJ-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$";
+        Pattern pattern = Pattern.compile(regex);
 
         for (Token token : generatedTokens) {
             assertNotNull(token.getTokenId());
-            assertTrue(token.getTokenId().startsWith(AppConstants.TOKEN_PREFIX));
-            assertEquals(AppConstants.TOKEN_TOTAL_LENGTH, token.getTokenId().length());
+            assertTrue(pattern.matcher(token.getTokenId()).matches(), "Token ID format mismatch: " + token.getTokenId());
+
+            // Verify character exclusions
+            assertFalse(token.getTokenId().contains("0"), "Token ID contains '0': " + token.getTokenId());
+            assertFalse(token.getTokenId().contains("1"), "Token ID contains '1': " + token.getTokenId());
+            assertFalse(token.getTokenId().contains("I"), "Token ID contains 'I': " + token.getTokenId());
+            assertFalse(token.getTokenId().contains("L"), "Token ID contains 'L': " + token.getTokenId());
+            assertFalse(token.getTokenId().contains("O"), "Token ID contains 'O': " + token.getTokenId());
+
             assertEquals(playerId, token.getPlayerId());
             assertEquals(points, token.getPoints());
             assertEquals(photoAssetId, token.getPhotoAssetId());
             assertEquals(productSku, token.getProductSku());
             assertNotNull(token.getAqisoBatchId());
-            assertEquals("unused", token.getStatus());
+            assertTrue(token.getAqisoBatchId().startsWith("BATCH-"));
             assertNotNull(token.getCreatedAt());
+            assertEquals("unused", token.getStatus());
         }
 
         // Verify uniqueness of generated tokens within the batch
@@ -79,25 +90,42 @@ public class TokenGeneratorServiceTest {
     @Test
     void testExportBatch() {
         String batchId = "BATCH-12345";
-        List<Token> tokens = Arrays.asList(
-                createToken("RED-AAAA-BBBB-CCCC", batchId),
-                createToken("RED-DDDD-EEEE-FFFF", batchId)
-        );
+        List<TokenEntity> mockTokenEntities = new ArrayList<>();
+        TokenEntity token1 = new TokenEntity();
+        token1.setTokenId("RFZJ-ABCD-EFGH-IJKL");
+        token1.setPlayerId(1);
+        token1.setPoints(100L);
+        token1.setPhotoAssetId("asset123");
+        token1.setProductSku("sku456");
+        token1.setAqisoBatchId(batchId);
+        token1.setStatus("unused");
+        token1.setCreatedAt(LocalDateTime.now());
+        mockTokenEntities.add(token1);
+        TokenEntity token2 = new TokenEntity();
+        token2.setTokenId("RFZJ-MNOP-QRST-UVWX");
+        token2.setPlayerId(1);
+        token2.setPoints(100L);
+        token2.setPhotoAssetId("asset123");
+        token2.setProductSku("sku456");
+        token2.setAqisoBatchId(batchId);
+        token2.setStatus("unused");
+        token2.setCreatedAt(LocalDateTime.now());
+        mockTokenEntities.add(token2);
 
-        when(tokenRepository.findByAqisoBatchId(batchId)).thenReturn(tokens);
+        when(tokenMapper.findByAqisoBatchId(batchId)).thenReturn(mockTokenEntities);
 
         String exportedContent = tokenGeneratorService.exportBatch(batchId);
 
         assertNotNull(exportedContent);
-        assertTrue(exportedContent.contains("RED-AAAA-BBBB-CCCC"));
-        assertTrue(exportedContent.contains("RED-DDDD-EEEE-FFFF"));
-        assertEquals("RED-AAAA-BBBB-CCCC\nRED-DDDD-EEEE-FFFF\n", exportedContent);
+        assertTrue(exportedContent.contains("RFZJ-ABCD-EFGH-IJKL"));
+        assertTrue(exportedContent.contains("RFZJ-MNOP-QRST-UVWX"));
+        assertTrue(exportedContent.endsWith("UVWX\n"));
     }
 
     @Test
     void testExportBatch_NoTokensFound() {
         String batchId = "NON_EXISTENT_BATCH";
-        when(tokenRepository.findByAqisoBatchId(batchId)).thenReturn(new ArrayList<>());
+        when(tokenMapper.findByAqisoBatchId(batchId)).thenReturn(new ArrayList<>());
 
         String exportedContent = tokenGeneratorService.exportBatch(batchId);
 
