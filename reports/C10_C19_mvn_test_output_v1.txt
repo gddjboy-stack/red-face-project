@@ -1,0 +1,188 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--------------------< [0;36mcom.redface:redface-backend[0;1m >---------------------[m
+[[1;34mINFO[m] [1mBuilding redface-backend 0.0.1-SNAPSHOT[m
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-clean-plugin:3.3.2:clean[m [1m(default-clean)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Deleting /home/ubuntu/red-face-project/backend/redface-backend/target
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-resources-plugin:3.3.1:resources[m [1m(default-resources)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Copying 0 resource from src/main/resources to target/classes
+[[1;34mINFO[m] Copying 0 resource from src/main/resources to target/classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-compiler-plugin:3.11.0:compile[m [1m(default-compile)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Changes detected - recompiling the module! :source
+[[1;34mINFO[m] Compiling 81 source files with javac [debug release 17] to target/classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-resources-plugin:3.3.1:testResources[m [1m(default-testResources)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Copying 2 resources from src/test/resources to target/test-classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-compiler-plugin:3.11.0:testCompile[m [1m(default-testCompile)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Changes detected - recompiling the module! :dependency
+[[1;34mINFO[m] Compiling 16 source files with javac [debug release 17] to target/test-classes
+[[1;34mINFO[m] /home/ubuntu/red-face-project/backend/redface-backend/src/test/java/com/redface/service/TokenGeneratorServiceTest.java: /home/ubuntu/red-face-project/backend/redface-backend/src/test/java/com/redface/service/TokenGeneratorServiceTest.java uses unchecked or unsafe operations.
+[[1;34mINFO[m] /home/ubuntu/red-face-project/backend/redface-backend/src/test/java/com/redface/service/TokenGeneratorServiceTest.java: Recompile with -Xlint:unchecked for details.
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-surefire-plugin:3.1.2:test[m [1m(default-test)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[[1;34mINFO[m] 
+[[1;34mINFO[m] -------------------------------------------------------
+[[1;34mINFO[m]  T E S T S
+[[1;34mINFO[m] -------------------------------------------------------
+[[1;34mINFO[m] Running com.redface.[1mAuthControllerC9Test[m
+11:47:43.379 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.redface.AuthControllerC9Test]: AuthControllerC9Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+11:47:43.506 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.AuthControllerC9Test
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-06-16T11:47:43.969Z  INFO 75950 --- [           main] com.redface.AuthControllerC9Test         : Starting AuthControllerC9Test using Java 17.0.18 with PID 75950 (started by ubuntu in /home/ubuntu/red-face-project/backend/redface-backend)
+2026-06-16T11:47:43.971Z  INFO 75950 --- [           main] com.redface.AuthControllerC9Test         : The following 1 profile is active: "test"
+2026-06-16T11:47:44.917Z  INFO 75950 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-16T11:47:45.099Z  INFO 75950 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:redface user=SA
+2026-06-16T11:47:45.101Z  INFO 75950 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-16T11:47:45.863Z  INFO 75950 --- [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-06-16T11:47:45.864Z  INFO 75950 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-06-16T11:47:45.868Z  INFO 75950 --- [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-06-16T11:47:45.899Z  INFO 75950 --- [           main] com.redface.AuthControllerC9Test         : Started AuthControllerC9Test in 2.237 seconds (process running for 3.355)
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2026-06-16T11:47:46.796Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=4bebf5f3-9754-4ab4-91bd-548b6fbc8775 method=POST path=/api/auth/login status=400 costMs=141
+2026-06-16T11:47:46.860Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=f7921fbe-c261-431b-bc9a-042eadc9f17d method=GET path=/api/me/photos status=401 costMs=5
+2026-06-16T11:47:46.937Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=dd2775b8-0452-44a2-a821-290772a1f323 method=POST path=/api/auth/login status=200 costMs=64
+2026-06-16T11:47:46.953Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=beb7ca9a-bab1-4d7b-adca-4a6643f0ea7b method=POST path=/api/auth/login status=200 costMs=9
+2026-06-16T11:47:46.959Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=5103b942-edae-46f9-b7a6-0fa166f661b7 method=POST path=/api/auth/login status=200 costMs=4
+2026-06-16T11:47:46.965Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=1f77b4b9-1b4a-4137-ba21-cc21e066007b method=POST path=/api/auth/login status=200 costMs=4
+2026-06-16T11:47:47.035Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=7d467f70-c8d9-4d69-b1ab-1384aedb9a66 method=POST path=/api/auth/login status=200 costMs=6
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m4[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.843 s -- in com.redface.[1mAuthControllerC9Test[m
+[[1;34mINFO[m] Running com.redface.[1mAdminControlControllerC10Test[m
+2026-06-16T11:47:47.053Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.AdminControlControllerC10Test]: AdminControlControllerC10Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:47.058Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.AdminControlControllerC10Test
+2026-06-16T11:47:47.098Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=31265bac-3b4c-4d5f-8a81-5e196e1597d3 method=POST path=/api/admin/collect-state status=200 costMs=15
+2026-06-16T11:47:47.116Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=db44f926-832b-4cfd-abd5-b597b0da2d9e method=POST path=/api/admin/live/simulate status=200 costMs=17
+2026-06-16T11:47:47.126Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=967edb28-7fbe-4ece-bc82-9c54f13e580f method=POST path=/api/admin/live/simulate status=200 costMs=8
+2026-06-16T11:47:47.138Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=bbc6f946-a058-499c-9c88-06cd0dce6116 method=POST path=/api/admin/live/simulate status=200 costMs=9
+2026-06-16T11:47:47.159Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=e2aff753-a0ae-4cc3-ae12-a4e62e9affbf method=GET path=/api/admin/live/home status=200 costMs=10
+2026-06-16T11:47:47.178Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=cdcf1059-6472-43df-b642-4bb48037b519 method=POST path=/api/admin/collect-state status=200 costMs=3
+2026-06-16T11:47:47.185Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=e2a651ad-4784-4024-98da-3302f4d3d09c method=GET path=/api/admin/collect-state status=200 costMs=6
+2026-06-16T11:47:47.231Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=7c81bba9-f097-4065-be1c-9ba09ade7b52 method=POST path=/api/admin/team-distribution status=200 costMs=31
+2026-06-16T11:47:47.268Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=2f9c75bf-89de-4717-afe7-b74913a75af6 method=POST path=/api/admin/popularity/manual-adjust status=200 costMs=16
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m4[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.223 s -- in com.redface.[1mAdminControlControllerC10Test[m
+[[1;34mINFO[m] Running com.redface.[1mLiveHomeControllerC9Test[m
+2026-06-16T11:47:47.281Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.LiveHomeControllerC9Test]: LiveHomeControllerC9Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:47.285Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.LiveHomeControllerC9Test
+2026-06-16T11:47:47.302Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=badd3870-00a4-447a-86d7-6f6bd9adaa32 method=GET path=/api/live/home status=200 costMs=5
+2026-06-16T11:47:47.316Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=0ff0f841-28ec-48c9-b813-1f546c45c6da method=GET path=/api/live/home status=200 costMs=1
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m2[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.040 s -- in com.redface.[1mLiveHomeControllerC9Test[m
+[[1;34mINFO[m] Running com.redface.[1mLiveDataServiceC7Test[m
+2026-06-16T11:47:47.326Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.LiveDataServiceC7Test]: LiveDataServiceC7Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:47.328Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.LiveDataServiceC7Test
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-06-16T11:47:47.356Z  INFO 75950 --- [           main] com.redface.LiveDataServiceC7Test        : Starting LiveDataServiceC7Test using Java 17.0.18 with PID 75950 (started by ubuntu in /home/ubuntu/red-face-project/backend/redface-backend)
+2026-06-16T11:47:47.356Z  INFO 75950 --- [           main] com.redface.LiveDataServiceC7Test        : The following 1 profile is active: "test"
+2026-06-16T11:47:47.562Z  INFO 75950 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-06-16T11:47:47.564Z  INFO 75950 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection conn10: url=jdbc:h2:mem:redface user=SA
+2026-06-16T11:47:47.564Z  INFO 75950 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-06-16T11:47:47.814Z  INFO 75950 --- [           main] com.redface.LiveDataServiceC7Test        : Started LiveDataServiceC7Test in 0.477 seconds (process running for 5.27)
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m4[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.708 s -- in com.redface.[1mLiveDataServiceC7Test[m
+[[1;34mINFO[m] Running com.redface.[1mCoefficientAndDistributionC8Test[m
+2026-06-16T11:47:48.038Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.CoefficientAndDistributionC8Test]: CoefficientAndDistributionC8Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:48.039Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.CoefficientAndDistributionC8Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m8[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.215 s -- in com.redface.[1mCoefficientAndDistributionC8Test[m
+[[1;34mINFO[m] Running com.redface.[1mBasicDataControllerC19Test[m
+2026-06-16T11:47:48.255Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.BasicDataControllerC19Test]: BasicDataControllerC19Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:48.258Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.BasicDataControllerC19Test
+2026-06-16T11:47:48.286Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=1ae9aa28-98e2-491c-a1c5-61b066875917 method=POST path=/api/admin/player-round status=200 costMs=17
+2026-06-16T11:47:48.295Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=c5f6935c-2d2a-4e04-9f4e-aa5ae4d89756 method=GET path=/api/admin/player-round status=200 costMs=7
+2026-06-16T11:47:48.315Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=1748b299-ac7c-46ab-9fe8-5fe0ffa7db63 method=POST path=/api/admin/teams status=200 costMs=8
+2026-06-16T11:47:48.327Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=50ccf53b-b0ce-48e9-a4b2-12ed2b901124 method=POST path=/api/admin/rounds status=200 costMs=10
+2026-06-16T11:47:48.344Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=d3aee6c9-f102-4cd1-879a-58e2db802f55 method=PUT path=/api/admin/rounds/2/status status=200 costMs=15
+2026-06-16T11:47:48.361Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=09b1a130-aaea-4eee-9ae6-ef7be777fcc2 method=POST path=/api/admin/players status=200 costMs=8
+2026-06-16T11:47:48.367Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=78214e9b-a1b4-42f6-8301-92b22763fc49 method=POST path=/api/admin/players status=400 costMs=4
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m3[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.119 s -- in com.redface.[1mBasicDataControllerC19Test[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityServiceC2Test[m
+2026-06-16T11:47:48.376Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.PopularityServiceC2Test]: PopularityServiceC2Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:48.377Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityServiceC2Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m2[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.030 s -- in com.redface.[1mPopularityServiceC2Test[m
+[[1;34mINFO[m] Running com.redface.[1mTokenRedeemControllerC9Test[m
+2026-06-16T11:47:48.409Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.TokenRedeemControllerC9Test]: TokenRedeemControllerC9Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:48.412Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.TokenRedeemControllerC9Test
+2026-06-16T11:47:48.426Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=1c71a6d2-cef8-4ecb-a55b-4b85aa41b537 method=POST path=/api/auth/login status=200 costMs=5
+2026-06-16T11:47:48.438Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=e768ff2e-ee59-4e8f-946c-08cf18d8c338 method=POST path=/api/tokens/redeem status=200 costMs=10
+2026-06-16T11:47:48.451Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=69a27c61-23b7-49d3-8388-55ffe1e6b565 method=POST path=/api/auth/login status=200 costMs=5
+2026-06-16T11:47:48.455Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=3c353218-18c8-42f6-9712-50d66a6d88bc method=POST path=/api/tokens/redeem status=200 costMs=3
+2026-06-16T11:47:48.468Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=f6097ca6-057c-4793-9b61-67b1af8b2e75 method=POST path=/api/auth/login status=200 costMs=4
+2026-06-16T11:47:48.481Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=9e9e5894-ca01-451f-8a3a-459b16aa6bf5 method=POST path=/api/tokens/redeem status=200 costMs=12
+2026-06-16T11:47:48.493Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=98c34d8e-716a-4efc-81b5-5cb6d71b7a45 method=POST path=/api/tokens/redeem status=401 costMs=2
+2026-06-16T11:47:48.505Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=0f295c45-0570-4773-aff8-cb6630cbb777 method=POST path=/api/auth/login status=200 costMs=4
+2026-06-16T11:47:48.511Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=cb4fbc0e-e1d6-4b62-a4cf-a26121d37e49 method=POST path=/api/tokens/redeem status=200 costMs=5
+2026-06-16T11:47:48.523Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=86b670cf-66ca-4dc1-9a3c-83dee99ba37a method=POST path=/api/auth/login status=200 costMs=3
+2026-06-16T11:47:48.528Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=0066dcdf-42ad-41f3-a3b6-1e0c3b222f82 method=POST path=/api/tokens/redeem status=200 costMs=3
+2026-06-16T11:47:48.532Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=8ad28985-34ec-4ce0-9992-6f17c4ace2b1 method=POST path=/api/tokens/redeem status=200 costMs=3
+2026-06-16T11:47:48.537Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=aa5a4376-198e-4b19-876d-f01e87349467 method=POST path=/api/tokens/redeem status=200 costMs=4
+2026-06-16T11:47:48.542Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=5bc9c625-33f3-4418-a438-d327468e39bb method=POST path=/api/tokens/redeem status=200 costMs=4
+2026-06-16T11:47:48.547Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=68fbc5b9-4472-47bb-80ec-1f1c6dfaa852 method=POST path=/api/tokens/redeem status=200 costMs=4
+2026-06-16T11:47:48.551Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=fe0fb8f9-8bcb-4e5b-8805-065bcce7b342 method=POST path=/api/tokens/redeem status=200 costMs=3
+2026-06-16T11:47:48.565Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=3f699121-0c43-40de-a294-8022ccea0d2d method=POST path=/api/auth/login status=200 costMs=4
+2026-06-16T11:47:48.571Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=2d9389c7-d763-44b7-b1eb-792eaba3b512 method=POST path=/api/tokens/redeem status=200 costMs=5
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m7[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.167 s -- in com.redface.[1mTokenRedeemControllerC9Test[m
+[[1;34mINFO[m] Running com.redface.[1mMyPhotosControllerC9Test[m
+2026-06-16T11:47:48.578Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.MyPhotosControllerC9Test]: MyPhotosControllerC9Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:48.581Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.MyPhotosControllerC9Test
+2026-06-16T11:47:48.592Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=3f31fb49-7f41-4fd3-9439-2fbcc51759a6 method=POST path=/api/auth/login status=200 costMs=3
+2026-06-16T11:47:48.597Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=c364d094-1c29-47ed-897f-77a4dd6ebebf method=POST path=/api/auth/login status=200 costMs=3
+2026-06-16T11:47:48.601Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=f7c19a09-3ac1-4afc-b7bc-f29e0f5a6f64 method=POST path=/api/auth/login status=200 costMs=3
+2026-06-16T11:47:48.609Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=2ad31cb6-e2cf-4035-a57f-2bb36ed2df85 method=GET path=/api/me/photos status=200 costMs=6
+2026-06-16T11:47:48.624Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=d00d23c4-9856-4c74-aa94-a3ddad4c5c4d method=POST path=/api/auth/login status=200 costMs=5
+2026-06-16T11:47:48.629Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=1fceae83-6b54-4fac-94e4-33e5c4c3cc78 method=GET path=/api/me/photos status=200 costMs=3
+2026-06-16T11:47:48.643Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=2b302533-9664-4cbe-864b-6e6fcce99b99 method=GET path=/api/me/photos status=401 costMs=1
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m3[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.070 s -- in com.redface.[1mMyPhotosControllerC9Test[m
+[[1;34mINFO[m] Running com.redface.service.[1mTokenGeneratorServiceTest[m
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m3[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.318 s -- in com.redface.service.[1mTokenGeneratorServiceTest[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityServiceC3Test[m
+2026-06-16T11:47:48.979Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.PopularityServiceC3Test]: PopularityServiceC3Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:48.984Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityServiceC3Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m4[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.144 s -- in com.redface.[1mPopularityServiceC3Test[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityBoardControllerC9Test[m
+2026-06-16T11:47:49.125Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.PopularityBoardControllerC9Test]: PopularityBoardControllerC9Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:49.131Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityBoardControllerC9Test
+2026-06-16T11:47:49.161Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=95d106d8-0661-4c3d-8fe3-b43904d3ae1c method=GET path=/api/popularity/board status=200 costMs=9
+2026-06-16T11:47:49.191Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=602257f6-efb2-4d89-b269-1ec2524419c5 method=GET path=/api/popularity/board status=200 costMs=4
+2026-06-16T11:47:49.220Z  INFO 75950 --- [           main] com.redface.web.RequestLoggingFilter     : requestId=0595accb-18dd-4f4c-a1af-b05080cf44a7 method=GET path=/api/popularity/board status=200 costMs=5
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m3[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.105 s -- in com.redface.[1mPopularityBoardControllerC9Test[m
+[[1;34mINFO[m] Running com.redface.[1mSchemaInitializationTest[m
+2026-06-16T11:47:49.231Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.SchemaInitializationTest]: SchemaInitializationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:49.234Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.SchemaInitializationTest
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m1[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.036 s -- in com.redface.[1mSchemaInitializationTest[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityServiceC4Test[m
+2026-06-16T11:47:49.270Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.PopularityServiceC4Test]: PopularityServiceC4Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:49.273Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityServiceC4Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m5[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.104 s -- in com.redface.[1mPopularityServiceC4Test[m
+[[1;34mINFO[m] Running com.redface.[1mTokenServiceC5Test[m
+2026-06-16T11:47:49.376Z  INFO 75950 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.TokenServiceC5Test]: TokenServiceC5Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T11:47:49.380Z  INFO 75950 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.TokenServiceC5Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m5[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.129 s -- in com.redface.[1mTokenServiceC5Test[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] Results:
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1;32mTests run: 58, Failures: 0, Errors: 0, Skipped: 0[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] [1;32mBUILD SUCCESS[m
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] Total time:  11.193 s
+[[1;34mINFO[m] Finished at: 2026-06-16T11:47:49Z
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m

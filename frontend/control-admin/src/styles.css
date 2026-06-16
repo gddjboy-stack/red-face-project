@@ -1,0 +1,89 @@
+body {
+  margin: 0;
+  min-width: 1180px;
+  background: #f5f1ec;
+  color: #2f2430;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.admin-shell {
+  padding: 24px;
+}
+
+.header-card {
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #4f172e, #c05b72);
+  color: white;
+  margin-bottom: 18px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.header-desc {
+  margin: 8px 0 0;
+  opacity: 0.9;
+}
+
+.operator-box {
+  width: 320px;
+}
+
+.grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.grid-three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.panel-card {
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-title {
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.metric-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: #9d254f;
+}
+
+.tip {
+  color: #7c6f76;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.warning-text {
+  color: #b45309;
+}
