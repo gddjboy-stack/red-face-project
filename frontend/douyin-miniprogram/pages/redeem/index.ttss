@@ -1,0 +1,4 @@
+.redeem-title { font-size: 34rpx; font-weight: 800; color: #d69a36; margin-bottom: 22rpx; }
+.token-input { margin: 22rpx 0; }
+.tip-text { color: #8d7f86; font-size: 25rpx; line-height: 1.7; }
+.lock-tip { margin-top: 18rpx; color: #b54d4d; text-align: center; }

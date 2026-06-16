@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "人气看板",
+  "usingComponents": {
+    "empty-state": "../../components/empty-state/index"
+  }
+}

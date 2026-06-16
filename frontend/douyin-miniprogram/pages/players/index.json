@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "选手",
+  "usingComponents": {
+    "empty-state": "../../components/empty-state/index"
+  }
+}

@@ -1,0 +1,4 @@
+<view class="empty-state">
+  <view class="empty-icon">{{icon || '∅'}}</view>
+  <view>{{text || '暂无数据'}}</view>
+</view>

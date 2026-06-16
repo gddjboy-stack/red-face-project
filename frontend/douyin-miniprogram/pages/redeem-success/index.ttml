@@ -1,0 +1,17 @@
+<view class="container success-page">
+  <view class="page-title">
+    <text>核销成功</text>
+  </view>
+  <view class="card success-card">
+    <view class="success-icon">✓</view>
+    <view class="success-title">数字写真已自动存入我的收藏</view>
+    <view class="success-subtitle">本次人气值已计入对应选手。</view>
+    <image tt:if="{{!imageError && photoPreviewUrl}}" class="photo-preview safe-image" src="{{photoPreviewUrl}}" mode="aspectFill" binderror="onImageError" />
+    <image tt:else class="photo-preview safe-image" src="/assets/placeholders/photo_clean_stage.svg" mode="aspectFill" />
+    <view class="info-row"><text>选手</text><text>{{playerText}}</text></view>
+    <view class="info-row"><text>团队</text><text>{{payload.teamName || '--'}}</text></view>
+    <view class="info-row"><text>增加人气值</text><text class="number-strong">{{pointsText}}</text></view>
+    <button class="primary-btn" bindtap="goPhotos">查看我的写真</button>
+    <button class="ghost-btn" bindtap="goHome">返回首页</button>
+  </view>
+</view>

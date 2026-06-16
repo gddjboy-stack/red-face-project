@@ -1,0 +1,40 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/players/index",
+    "pages/popularity/index",
+    "pages/redeem/index",
+    "pages/redeem-success/index",
+    "pages/my-photos/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "红颜局中局",
+    "navigationBarBackgroundColor": "#fff5f8",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fff5f8"
+  },
+  "tabBar": {
+    "color": "#8d858a",
+    "selectedColor": "#d79a39",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/players/index",
+        "text": "选手"
+      },
+      {
+        "pagePath": "pages/popularity/index",
+        "text": "人气"
+      },
+      {
+        "pagePath": "pages/my-photos/index",
+        "text": "我的"
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "projectname": "redface-douyin-miniprogram",
+  "appid": "tt-placeholder-appid",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram"
+}

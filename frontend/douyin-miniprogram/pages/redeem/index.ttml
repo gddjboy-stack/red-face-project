@@ -1,0 +1,15 @@
+<view class="container redeem-page">
+  <view class="page-title">
+    <text>卡密核销</text>
+    <text class="muted">领取数字写真</text>
+  </view>
+  <view class="card">
+    <view class="redeem-title">输入卡密</view>
+    <input class="input token-input" value="{{token}}" placeholder="RFZJ-XXXX-XXXX-XXXX" bindinput="onTokenInput" />
+    <view class="tip-text">请手动输入或点击粘贴按钮，页面不会自动读取剪贴板。</view>
+    <button class="ghost-btn" bindtap="pasteToken">粘贴卡密</button>
+    <button class="primary-btn" bindtap="submitRedeem" loading="{{submitting}}" disabled="{{submitting}}">确认核销</button>
+    <view class="error-tip" tt:if="{{errorMessage}}">{{errorMessage}}</view>
+    <view class="lock-tip" tt:if="{{remainingSeconds}}">请等待 {{remainingSeconds}} 秒后再试。</view>
+  </view>
+</view>

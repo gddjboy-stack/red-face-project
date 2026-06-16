@@ -1,0 +1,39 @@
+<view class="container popularity-page">
+  <view class="page-title">
+    <text>人气看板</text>
+    <text class="muted">按序号排列 · 不设名次</text>
+  </view>
+
+  <view class="card">
+    <view class="tab-row">
+      <view class="tab {{activeTab === 'player' ? 'active' : ''}}" data-tab="player" bindtap="switchTab">个人</view>
+      <view class="tab {{activeTab === 'team' ? 'active' : ''}}" data-tab="team" bindtap="switchTab">团队</view>
+      <view class="tab {{activeTab === 'spy' ? 'active' : ''}}" data-tab="spy" bindtap="switchTab">卧底</view>
+    </view>
+    <view class="round-row">
+      <text>轮次 ID</text>
+      <input class="round-input" type="number" value="{{roundId}}" bindinput="onRoundInput" />
+      <button class="mini-btn" bindtap="loadBoard" loading="{{loading}}">刷新</button>
+    </view>
+    <view class="compliance-tip">本页不显示名次，不按人气值重排。</view>
+  </view>
+
+  <view tt:if="{{activeTab === 'spy' && !board.spyTabEnabled}}" class="card disabled-card">
+    <text>卧底档将在对应环节开启。</text>
+  </view>
+
+  <view tt:elif="{{items.length === 0}}" class="card">
+    <empty-state text="暂无人气数据" icon="◎" />
+  </view>
+
+  <view tt:else class="board-list">
+    <view class="board-item" tt:for="{{items}}" tt:key="number">
+      <view class="badge">{{item.number || '-'}}</view>
+      <view class="item-main">
+        <view class="item-title">{{item.name}}</view>
+        <view class="muted">{{item.teamName || (activeTab === 'team' ? '团队' : '暂未分队')}}</view>
+      </view>
+      <view class="item-value">{{item.valueText}}</view>
+    </view>
+  </view>
+</view>

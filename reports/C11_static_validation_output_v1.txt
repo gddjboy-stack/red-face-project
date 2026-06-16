@@ -1,0 +1,100 @@
+=== C11 Douyin MiniProgram Static Validation v1 ===
+--- file tree ---
+frontend/douyin-miniprogram/README.md
+frontend/douyin-miniprogram/app.js
+frontend/douyin-miniprogram/app.json
+frontend/douyin-miniprogram/app.ttss
+frontend/douyin-miniprogram/assets/placeholders/photo_clean_stage.svg
+frontend/douyin-miniprogram/components/empty-state/index.js
+frontend/douyin-miniprogram/components/empty-state/index.json
+frontend/douyin-miniprogram/components/empty-state/index.ttml
+frontend/douyin-miniprogram/components/empty-state/index.ttss
+frontend/douyin-miniprogram/config/env.js
+frontend/douyin-miniprogram/pages/home/index.js
+frontend/douyin-miniprogram/pages/home/index.json
+frontend/douyin-miniprogram/pages/home/index.ttml
+frontend/douyin-miniprogram/pages/home/index.ttss
+frontend/douyin-miniprogram/pages/my-photos/index.js
+frontend/douyin-miniprogram/pages/my-photos/index.json
+frontend/douyin-miniprogram/pages/my-photos/index.ttml
+frontend/douyin-miniprogram/pages/my-photos/index.ttss
+frontend/douyin-miniprogram/pages/players/index.js
+frontend/douyin-miniprogram/pages/players/index.json
+frontend/douyin-miniprogram/pages/players/index.ttml
+frontend/douyin-miniprogram/pages/players/index.ttss
+frontend/douyin-miniprogram/pages/popularity/index.js
+frontend/douyin-miniprogram/pages/popularity/index.json
+frontend/douyin-miniprogram/pages/popularity/index.ttml
+frontend/douyin-miniprogram/pages/popularity/index.ttss
+frontend/douyin-miniprogram/pages/redeem-success/index.js
+frontend/douyin-miniprogram/pages/redeem-success/index.json
+frontend/douyin-miniprogram/pages/redeem-success/index.ttml
+frontend/douyin-miniprogram/pages/redeem-success/index.ttss
+frontend/douyin-miniprogram/pages/redeem/index.js
+frontend/douyin-miniprogram/pages/redeem/index.json
+frontend/douyin-miniprogram/pages/redeem/index.ttml
+frontend/douyin-miniprogram/pages/redeem/index.ttss
+frontend/douyin-miniprogram/project.config.json
+frontend/douyin-miniprogram/utils/api.js
+frontend/douyin-miniprogram/utils/auth.js
+frontend/douyin-miniprogram/utils/constants.js
+frontend/douyin-miniprogram/utils/format.js
+frontend/douyin-miniprogram/utils/request.js
+--- json parse check ---
+OK JSON frontend/douyin-miniprogram/app.json
+OK JSON frontend/douyin-miniprogram/components/empty-state/index.json
+OK JSON frontend/douyin-miniprogram/pages/home/index.json
+OK JSON frontend/douyin-miniprogram/pages/my-photos/index.json
+OK JSON frontend/douyin-miniprogram/pages/players/index.json
+OK JSON frontend/douyin-miniprogram/pages/popularity/index.json
+OK JSON frontend/douyin-miniprogram/pages/redeem/index.json
+OK JSON frontend/douyin-miniprogram/pages/redeem-success/index.json
+OK JSON frontend/douyin-miniprogram/project.config.json
+--- javascript syntax check ---
+OK JS frontend/douyin-miniprogram/app.js
+OK JS frontend/douyin-miniprogram/components/empty-state/index.js
+OK JS frontend/douyin-miniprogram/config/env.js
+OK JS frontend/douyin-miniprogram/pages/home/index.js
+OK JS frontend/douyin-miniprogram/pages/my-photos/index.js
+OK JS frontend/douyin-miniprogram/pages/players/index.js
+OK JS frontend/douyin-miniprogram/pages/popularity/index.js
+OK JS frontend/douyin-miniprogram/pages/redeem-success/index.js
+OK JS frontend/douyin-miniprogram/pages/redeem/index.js
+OK JS frontend/douyin-miniprogram/utils/api.js
+OK JS frontend/douyin-miniprogram/utils/auth.js
+OK JS frontend/douyin-miniprogram/utils/constants.js
+OK JS frontend/douyin-miniprogram/utils/format.js
+OK JS frontend/douyin-miniprogram/utils/request.js
+--- required pages check ---
+OK page home index.js
+OK page home index.json
+OK page home index.ttml
+OK page home index.ttss
+OK page players index.js
+OK page players index.json
+OK page players index.ttml
+OK page players index.ttss
+OK page popularity index.js
+OK page popularity index.json
+OK page popularity index.ttml
+OK page popularity index.ttss
+OK page redeem index.js
+OK page redeem index.json
+OK page redeem index.ttml
+OK page redeem index.ttss
+OK page redeem-success index.js
+OK page redeem-success index.json
+OK page redeem-success index.ttml
+OK page redeem-success index.ttss
+OK page my-photos index.js
+OK page my-photos index.json
+OK page my-photos index.ttml
+OK page my-photos index.ttss
+--- redline keyword check ---
+OK no prohibited redline keywords
+--- no value sort check ---
+OK no sort or value arithmetic in frontend board rendering
+--- clipboard compliance check ---
+frontend/douyin-miniprogram/pages/redeem/index.js:24:    tt.getClipboardData({
+--- placeholder image check ---
+OK placeholder exists

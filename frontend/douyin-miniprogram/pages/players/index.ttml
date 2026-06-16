@@ -1,0 +1,30 @@
+<view class="container players-page">
+  <view class="page-title">
+    <text>选手</text>
+    <text class="muted">按序号查看</text>
+  </view>
+  <view class="card notice-card">
+    <view class="notice-title">彩排版说明</view>
+    <view class="notice-text">完整选手详情页留 C15。本页复用人气看板 player 数据，仅展示选手列表与当前人气，不展示个人动态、关注、距离、相关视频或周边入口。</view>
+  </view>
+  <view class="card">
+    <view class="round-row">
+      <text>轮次 ID</text>
+      <input class="round-input" type="number" value="{{roundId}}" bindinput="onRoundInput" />
+      <button class="mini-btn" bindtap="loadPlayers" loading="{{loading}}">刷新</button>
+    </view>
+  </view>
+  <view tt:if="{{items.length === 0}}" class="card">
+    <empty-state text="暂无选手数据" icon="◎" />
+  </view>
+  <view tt:else>
+    <view class="player-card" tt:for="{{items}}" tt:key="number">
+      <view class="badge">{{item.number || '-'}}</view>
+      <view class="player-main">
+        <view class="player-name">{{item.name}}</view>
+        <view class="muted">{{item.teamName || '暂未分队'}}</view>
+      </view>
+      <view class="player-value">{{item.valueText}}</view>
+    </view>
+  </view>
+</view>

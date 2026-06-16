@@ -1,0 +1,24 @@
+<view class="container photos-page">
+  <view class="page-title">
+    <text>我的写真</text>
+    <text class="muted">共 {{total}} 张</text>
+  </view>
+  <view class="card intro-card">
+    <view class="intro-title">数字写真收藏</view>
+    <view class="intro-text">核销成功后，写真会自动存入这里。图片如暂未加载，将显示清新舞台占位图。</view>
+  </view>
+  <view tt:if="{{items.length === 0}}" class="card">
+    <empty-state text="暂无收藏写真" icon="□" />
+  </view>
+  <view tt:else class="photo-grid">
+    <view class="photo-card" tt:for="{{items}}" tt:key="assetId">
+      <image tt:if="{{!item.imageError && item.previewUrl}}" class="photo-img safe-image" src="{{item.previewUrl}}" mode="aspectFill" binderror="onImageError" data-index="{{index}}" />
+      <image tt:else class="photo-img safe-image" src="/assets/placeholders/photo_clean_stage.svg" mode="aspectFill" />
+      <view class="photo-meta">
+        <view class="photo-title">{{item.playerName || '选手写真'}}</view>
+        <view class="muted">{{item.createdAtText}}</view>
+      </view>
+    </view>
+  </view>
+  <button class="ghost-btn" bindtap="loadPhotos" loading="{{loading}}">刷新我的写真</button>
+</view>
