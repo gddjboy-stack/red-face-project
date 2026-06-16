@@ -1,0 +1,85 @@
+[[1;34mINFO[m] Scanning for projects...
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--------------------< [0;36mcom.redface:redface-backend[0;1m >---------------------[m
+[[1;34mINFO[m] [1mBuilding redface-backend 0.0.1-SNAPSHOT[m
+[[1;34mINFO[m] [1m--------------------------------[ jar ]---------------------------------[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-resources-plugin:3.3.1:resources[m [1m(default-resources)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Copying 0 resource from src/main/resources to target/classes
+[[1;34mINFO[m] Copying 0 resource from src/main/resources to target/classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-compiler-plugin:3.11.0:compile[m [1m(default-compile)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Changes detected - recompiling the module! :source
+[[1;34mINFO[m] Compiling 35 source files with javac [debug release 17] to target/classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-resources-plugin:3.3.1:testResources[m [1m(default-testResources)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Copying 2 resources from src/test/resources to target/test-classes
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-compiler-plugin:3.11.0:testCompile[m [1m(default-testCompile)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Changes detected - recompiling the module! :dependency
+[[1;34mINFO[m] Compiling 8 source files with javac [debug release 17] to target/test-classes
+[[1;34mINFO[m] /home/ubuntu/red-face-project/backend/redface-backend/src/test/java/com/redface/service/TokenGeneratorServiceTest.java: /home/ubuntu/red-face-project/backend/redface-backend/src/test/java/com/redface/service/TokenGeneratorServiceTest.java uses unchecked or unsafe operations.
+[[1;34mINFO[m] /home/ubuntu/red-face-project/backend/redface-backend/src/test/java/com/redface/service/TokenGeneratorServiceTest.java: Recompile with -Xlint:unchecked for details.
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m--- [0;32mmaven-surefire-plugin:3.1.2:test[m [1m(default-test)[m @ [36mredface-backend[0;1m ---[m
+[[1;34mINFO[m] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[[1;34mINFO[m] 
+[[1;34mINFO[m] -------------------------------------------------------
+[[1;34mINFO[m]  T E S T S
+[[1;34mINFO[m] -------------------------------------------------------
+[[1;34mINFO[m] Running com.redface.service.[1mTokenGeneratorServiceTest[m
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m3[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.984 s -- in com.redface.service.[1mTokenGeneratorServiceTest[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityServiceC3Test[m
+03:39:09.836 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.redface.PopularityServiceC3Test]: PopularityServiceC3Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+03:39:09.929 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityServiceC3Test
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-06-16T03:39:10.341Z  INFO 69292 --- [           main] com.redface.PopularityServiceC3Test      : Starting PopularityServiceC3Test using Java 17.0.18 with PID 69292 (started by ubuntu in /home/ubuntu/red-face-project/backend/redface-backend)
+2026-06-16T03:39:10.343Z  INFO 69292 --- [           main] com.redface.PopularityServiceC3Test      : The following 1 profile is active: "test"
+2026-06-16T03:39:11.262Z  INFO 69292 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-16T03:39:11.476Z  INFO 69292 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:redface user=SA
+2026-06-16T03:39:11.478Z  INFO 69292 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-16T03:39:12.239Z  INFO 69292 --- [           main] com.redface.PopularityServiceC3Test      : Started PopularityServiceC3Test in 2.181 seconds (process running for 4.062)
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m4[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.757 s -- in com.redface.[1mPopularityServiceC3Test[m
+[[1;34mINFO[m] Running com.redface.[1mSchemaInitializationTest[m
+2026-06-16T03:39:12.454Z  INFO 69292 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.SchemaInitializationTest]: SchemaInitializationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T03:39:12.455Z  INFO 69292 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.SchemaInitializationTest
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m1[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.025 s -- in com.redface.[1mSchemaInitializationTest[m
+[[1;34mINFO[m] Running com.redface.[1mLiveDataServiceC7Test[m
+2026-06-16T03:39:12.481Z  INFO 69292 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.LiveDataServiceC7Test]: LiveDataServiceC7Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T03:39:12.483Z  INFO 69292 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.LiveDataServiceC7Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m4[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.205 s -- in com.redface.[1mLiveDataServiceC7Test[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityServiceC4Test[m
+2026-06-16T03:39:12.689Z  INFO 69292 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.PopularityServiceC4Test]: PopularityServiceC4Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T03:39:12.691Z  INFO 69292 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityServiceC4Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m5[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.088 s -- in com.redface.[1mPopularityServiceC4Test[m
+[[1;34mINFO[m] Running com.redface.[1mCoefficientAndDistributionC8Test[m
+2026-06-16T03:39:12.781Z  INFO 69292 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.CoefficientAndDistributionC8Test]: CoefficientAndDistributionC8Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T03:39:12.783Z  INFO 69292 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.CoefficientAndDistributionC8Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m8[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.229 s -- in com.redface.[1mCoefficientAndDistributionC8Test[m
+[[1;34mINFO[m] Running com.redface.[1mPopularityServiceC2Test[m
+2026-06-16T03:39:13.011Z  INFO 69292 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.PopularityServiceC2Test]: PopularityServiceC2Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T03:39:13.016Z  INFO 69292 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.PopularityServiceC2Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m2[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in com.redface.[1mPopularityServiceC2Test[m
+[[1;34mINFO[m] Running com.redface.[1mTokenServiceC5Test[m
+2026-06-16T03:39:13.048Z  INFO 69292 --- [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.redface.TokenServiceC5Test]: TokenServiceC5Test does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-16T03:39:13.050Z  INFO 69292 --- [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.redface.RedfaceBackendApplication for test class com.redface.TokenServiceC5Test
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m5[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.095 s -- in com.redface.[1mTokenServiceC5Test[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] Results:
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1;32mTests run: 32, Failures: 0, Errors: 0, Skipped: 0[m
+[[1;34mINFO[m] 
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] [1;32mBUILD SUCCESS[m
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
+[[1;34mINFO[m] Total time:  8.376 s
+[[1;34mINFO[m] Finished at: 2026-06-16T03:39:13Z
+[[1;34mINFO[m] [1m------------------------------------------------------------------------[m
