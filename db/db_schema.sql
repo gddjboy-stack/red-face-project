@@ -141,6 +141,27 @@ CREATE TABLE user_photo_collection (
   UNIQUE KEY uq_user_token (user_id, token_id)
 ) ENGINE=InnoDB COMMENT='用户写真收藏';
 
+-- C9 用户身份映射表：openid 不明文落库，只保存 hash 与脱敏 user_id
+CREATE TABLE user_identity (
+  user_id       VARCHAR(64) NOT NULL COMMENT '脱敏用户标识',
+  openid_hash   VARCHAR(128) NOT NULL COMMENT 'openid SHA-256 hash',
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id),
+  UNIQUE KEY uq_openid_hash (openid_hash)
+) ENGINE=InnoDB COMMENT='C9用户身份映射';
+
+-- C9 用户会话表：Bearer token 登录态
+CREATE TABLE user_session (
+  token        VARCHAR(128) NOT NULL,
+  user_id      VARCHAR(64) NOT NULL,
+  expires_at   TIMESTAMP NOT NULL,
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (token),
+  KEY idx_user_session_user (user_id)
+) ENGINE=InnoDB COMMENT='C9用户会话';
+
 CREATE TABLE suspicion_votes (
   vote_id           BIGINT NOT NULL AUTO_INCREMENT,
   user_id           VARCHAR(64) NOT NULL,
@@ -216,6 +237,8 @@ ALTER TABLE photo_assets ADD CONSTRAINT fk_photo_assets_player_id FOREIGN KEY (p
 
 ALTER TABLE user_photo_collection ADD CONSTRAINT fk_user_photo_collection_asset_id FOREIGN KEY (asset_id) REFERENCES photo_assets (asset_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE user_photo_collection ADD CONSTRAINT fk_user_photo_collection_token_id FOREIGN KEY (token_id) REFERENCES tokens (token_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE user_session ADD CONSTRAINT fk_user_session_user_id FOREIGN KEY (user_id) REFERENCES user_identity (user_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_round_id FOREIGN KEY (round_id) REFERENCES rounds (round_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_team_id FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE;

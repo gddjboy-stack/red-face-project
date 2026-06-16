@@ -18,7 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class SchemaInitializationTest {
 
-    private static final int EXPECTED_TABLE_COUNT = 16;
+    private static final int EXPECTED_TABLE_COUNT = 18;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -50,6 +50,8 @@ class SchemaInitializationTest {
                         "tokens",
                         "photo_assets",
                         "user_photo_collection",
+                        "user_identity",
+                        "user_session",
                         "suspicion_votes",
                         "team_distribution_batches",
                         "collect_state",

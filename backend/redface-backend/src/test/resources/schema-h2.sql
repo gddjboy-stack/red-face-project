@@ -1,3 +1,23 @@
+-- H2 测试环境可能因不同 Spring 测试上下文重复初始化，先按外键反向顺序清理旧表。
+DROP TABLE IF EXISTS user_session;
+DROP TABLE IF EXISTS suspicion_votes;
+DROP TABLE IF EXISTS user_photo_collection;
+DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS photo_assets;
+DROP TABLE IF EXISTS coefficient_ledger;
+DROP TABLE IF EXISTS popularity_ledger;
+DROP TABLE IF EXISTS team_distribution_batches;
+DROP TABLE IF EXISTS operations_log;
+DROP TABLE IF EXISTS collect_state;
+DROP TABLE IF EXISTS pool_round_stats;
+DROP TABLE IF EXISTS team_round_stats;
+DROP TABLE IF EXISTS player_round_stats;
+DROP TABLE IF EXISTS player_round;
+DROP TABLE IF EXISTS user_identity;
+DROP TABLE IF EXISTS rounds;
+DROP TABLE IF EXISTS teams;
+DROP TABLE IF EXISTS players;
+
 -- 选手表(只存固定信息,每轮变化的信息在 player_round)
 CREATE TABLE players (
   player_id   INT NOT NULL AUTO_INCREMENT,
@@ -141,6 +161,27 @@ CREATE TABLE user_photo_collection (
   UNIQUE KEY uq_user_token (user_id, token_id)
 );
 
+-- C9 用户身份映射表：openid 不明文落库，只保存 hash 与脱敏 user_id
+CREATE TABLE user_identity (
+  user_id       VARCHAR(64) NOT NULL,
+  openid_hash   VARCHAR(128) NOT NULL,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id),
+  UNIQUE KEY uq_openid_hash (openid_hash)
+);
+
+-- C9 用户会话表：Bearer token 登录态
+CREATE TABLE user_session (
+  token        VARCHAR(128) NOT NULL,
+  user_id      VARCHAR(64) NOT NULL,
+  expires_at   TIMESTAMP NOT NULL,
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (token),
+  KEY idx_user_session_user (user_id)
+);
+
 CREATE TABLE suspicion_votes (
   vote_id           BIGINT NOT NULL AUTO_INCREMENT,
   user_id           VARCHAR(64) NOT NULL,
@@ -216,6 +257,8 @@ ALTER TABLE photo_assets ADD CONSTRAINT fk_photo_assets_player_id FOREIGN KEY (p
 
 ALTER TABLE user_photo_collection ADD CONSTRAINT fk_user_photo_collection_asset_id FOREIGN KEY (asset_id) REFERENCES photo_assets (asset_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE user_photo_collection ADD CONSTRAINT fk_user_photo_collection_token_id FOREIGN KEY (token_id) REFERENCES tokens (token_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE user_session ADD CONSTRAINT fk_user_session_user_id FOREIGN KEY (user_id) REFERENCES user_identity (user_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_round_id FOREIGN KEY (round_id) REFERENCES rounds (round_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_team_id FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE;
