@@ -9,7 +9,11 @@ Page({
     errorMessage: '',
     remainingSeconds: 0
   },
-  async onLoad() {
+    async onLoad(options) {
+        // C12 裁定：允许从 URL query 参数预填 token
+        if (options && options.token) {
+            this.setData({ token: String(options.token).trim().toUpperCase() });
+        }
     try {
       await ensureLogin()
     } catch (error) {
