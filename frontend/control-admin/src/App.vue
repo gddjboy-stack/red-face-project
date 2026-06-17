@@ -58,6 +58,21 @@
               <el-table-column prop="value" label="人气值" />
             </el-table>
           </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">真相识破监控</div>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="状态">{{ suspicionStatus.open ? '进行中' : '暂未开启' }}</el-descriptions-item>
+              <el-descriptions-item label="轮次">{{ suspicionStatus.roundName || suspicionStatus.roundId || '-' }}</el-descriptions-item>
+            </el-descriptions>
+            <p class="tip">只展示判断分布，按选手序号排列，不展示真实卧底身份。</p>
+            <el-table :data="suspicionStatus.candidates || []" size="small" height="260">
+              <el-table-column prop="number" label="序号" width="80" />
+              <el-table-column prop="playerName" label="选手" />
+              <el-table-column prop="teamName" label="队伍" />
+              <el-table-column prop="count" label="判断次数" />
+            </el-table>
+          </el-card>
         </div>
       </el-tab-pane>
 
@@ -240,13 +255,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { distributeTeam, getAdminBoard, getAdminHome, manualAdjust, setCollectState, simulateInject } from './api/admin'
+import { distributeTeam, getAdminBoard, getAdminHome, getSuspicionStatus, manualAdjust, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 
 const activeTab = ref('monitor')
 const operatorId = ref(localStorage.getItem('operatorId') || 'director')
 const home = ref<any>({})
 const board = ref<any>({ items: [] })
+const suspicionStatus = ref<any>({ candidates: [] })
 const boardTab = ref('player')
 const boardRoundId = ref(1)
 const players = ref<any[]>([])
@@ -285,6 +301,7 @@ async function runAction(message: string, action: () => Promise<any>, after?: ()
 async function refreshMonitor() {
   home.value = await getAdminHome()
   await refreshBoard()
+  suspicionStatus.value = await getSuspicionStatus(home.value.roundId || boardRoundId.value)
 }
 
 async function refreshBoard() {

@@ -43,7 +43,7 @@ public class LiveHomeService {
         response.setLiveStatus("live");
         response.setRoundId(activeRound.getRoundId());
         response.setRoundName(activeRound.getRoundName());
-        response.setSpyChannelOpen(false);
+        response.setSpyChannelOpen(isSpyChannelOpen(state, activeRound.getRoundId()));
         response.setUpdatedAt(toEpochSeconds(state == null ? LocalDateTime.now() : state.getUpdatedAt()));
 
         if (state == null || state.getMode() == null || state.getTargetId() == null && !MODE_POOL.equals(state.getMode())) {
@@ -66,6 +66,12 @@ public class LiveHomeService {
             response.setCurrentMode(MODE_NONE);
         }
         return response;
+    }
+
+    private boolean isSpyChannelOpen(CollectState state, int activeRoundId) {
+        return state != null
+                && MODE_SPY.equals(state.getMode())
+                && (state.getRoundId() == null || state.getRoundId().equals(activeRoundId));
     }
 
     private LiveHomeResponse idleResponse() {

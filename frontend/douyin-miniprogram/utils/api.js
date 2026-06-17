@@ -16,6 +16,19 @@ function redeemToken(token) {
   })
 }
 
+function getSuspicionStatus(roundId) {
+  const query = roundId ? `?roundId=${encodeURIComponent(roundId)}` : ''
+  return request({ url: `/api/suspicion/status${query}` })
+}
+
+function submitSuspicion(roundId, suspectPlayerId) {
+  return request({
+    url: '/api/suspicion/submit',
+    method: 'POST',
+    data: { roundId, suspectPlayerId }
+  })
+}
+
 function getMyPhotos() {
   return request({ url: '/api/me/photos' })
 }
@@ -24,5 +37,7 @@ module.exports = {
   getLiveHome,
   getPopularityBoard,
   redeemToken,
+  getSuspicionStatus,
+  submitSuspicion,
   getMyPhotos
 }

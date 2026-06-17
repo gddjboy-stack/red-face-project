@@ -3,6 +3,7 @@
     "pages/home/index",
     "pages/players/index",
     "pages/popularity/index",
+    "pages/suspicion/index",
     "pages/redeem/index",
     "pages/redeem-success/index",
     "pages/my-photos/index"

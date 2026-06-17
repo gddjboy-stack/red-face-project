@@ -27,3 +27,8 @@ export function manualAdjust(data: any) {
 export function distributeTeam(data: any) {
   return jsonPost<any>('/api/admin/team-distribution', data)
 }
+
+export function getSuspicionStatus(roundId?: number) {
+  const query = roundId ? `?roundId=${roundId}` : ''
+  return request<any>(`/api/admin/suspicion/status${query}`)
+}

@@ -25,6 +25,7 @@ abstract class C9MockMvcSupport {
 
     protected void clearTables() {
         jdbcTemplate.update("DELETE FROM user_session");
+        jdbcTemplate.update("DELETE FROM suspicion_votes");
         jdbcTemplate.update("DELETE FROM user_identity");
         jdbcTemplate.update("DELETE FROM user_photo_collection");
         jdbcTemplate.update("DELETE FROM popularity_ledger");

@@ -1,0 +1,56 @@
+<view class="container suspicion-page">
+  <view class="page-title">
+    <view>
+      <text>真相识破</text>
+      <text class="brand-subtitle">根据直播线索提交你的判断</text>
+    </view>
+    <text class="muted">···</text>
+  </view>
+
+  <view class="card intro-card">
+    <view class="row">
+      <text class="section-title">{{roundName || '当前环节'}}</text>
+      <text class="state-tag {{open ? 'active' : ''}}">{{open ? '进行中' : '暂未开启'}}</text>
+    </view>
+    <view class="intro-text">根据直播线索，选择你认为最可疑的选手。每轮仅可提交一次判断，提交后请等待直播间揭晓。</view>
+    <view class="intro-note">当前判断分布按选手序号排列，不设名次。</view>
+  </view>
+
+  <view tt:if="{{errorMessage}}" class="message-card">{{errorMessage}}</view>
+
+  <view tt:if="{{!open}}" class="card empty-panel">
+    <text>该环节暂未开启，请留意直播间提示。</text>
+  </view>
+
+  <view tt:else>
+    <view class="candidate-list">
+      <view
+        tt:for="{{candidates}}"
+        tt:key="playerId"
+        class="candidate-card {{item.selected ? 'selected' : ''}} {{item.submitted ? 'submitted' : ''}}"
+        data-player-id="{{item.playerId}}"
+        bindtap="selectCandidate"
+      >
+        <view class="candidate-head">
+          <view>
+            <text class="candidate-name">{{item.number}}号 {{item.playerName}}</text>
+            <text class="candidate-team">{{item.teamName || '未分队'}}</text>
+          </view>
+          <text class="choice-tag" tt:if="{{item.submitted}}">已提交</text>
+          <text class="choice-tag" tt:elif="{{item.selected}}">已选择</text>
+        </view>
+        <view class="progress-row">
+          <view class="progress-track">
+            <view class="progress-fill" style="width: {{item.percent}}%;"></view>
+          </view>
+          <text class="progress-text">{{item.count}} 次判断</text>
+        </view>
+      </view>
+    </view>
+
+    <button class="primary-btn" bindtap="submitChoice" loading="{{submitting}}" disabled="{{submitted || submitting}}">
+      {{submitted ? '本轮已提交' : '确认提交判断'}}
+    </button>
+    <button class="ghost-btn" bindtap="refreshStatus" loading="{{loading}}">刷新当前分布</button>
+  </view>
+</view>
