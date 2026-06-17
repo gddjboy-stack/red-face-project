@@ -1,5 +1,5 @@
 <template>
-  <main class="admin-shell">
+  <main class="admin-shell" @submit.prevent>
     <el-card class="header-card">
       <div class="header-content">
         <div>
@@ -29,13 +29,13 @@
               <el-descriptions-item label="团队">{{ home.teamDisplayName || '-' }} / {{ home.teamPopularity ?? 0 }}</el-descriptions-item>
             </el-descriptions>
             <template #footer>
-              <el-button type="primary" @click="refreshMonitor">刷新监控</el-button>
+              <el-button native-type="button" type="primary" @click="refreshMonitor">刷新监控</el-button>
             </template>
           </el-card>
 
           <el-card class="panel-card">
             <div class="panel-title">人气看板</div>
-            <el-form inline>
+            <el-form @submit.prevent inline>
               <el-form-item label="Tab">
                 <el-select v-model="boardTab" style="width: 140px" @change="refreshBoard">
                   <el-option label="个人" value="player" />
@@ -47,7 +47,7 @@
                 <el-input-number v-model="boardRoundId" :min="1" />
               </el-form-item>
               <el-form-item>
-                <el-button @click="refreshBoard">查询</el-button>
+                <el-button native-type="button" @click="refreshBoard">查询</el-button>
               </el-form-item>
             </el-form>
             <p class="tip">合规要求：后台只展示后端返回顺序，不按人气值重排。</p>
@@ -80,7 +80,7 @@
         <div class="grid-two">
           <el-card class="panel-card">
             <div class="panel-title">集赞目标切换</div>
-            <el-form label-width="100px">
+            <el-form @submit.prevent label-width="100px">
               <el-form-item label="模式">
                 <el-select v-model="collectForm.mode">
                   <el-option label="选手 player" value="player" />
@@ -96,14 +96,14 @@
                 <el-input-number v-model="collectForm.roundId" :min="1" />
               </el-form-item>
               <div class="form-actions">
-                <el-button type="primary" @click="submitCollectState">确认切换</el-button>
+                <el-button native-type="button" type="primary" @click="submitCollectState">确认切换</el-button>
               </div>
             </el-form>
           </el-card>
 
           <el-card class="panel-card">
             <div class="panel-title">模拟注入</div>
-            <el-form label-width="100px">
+            <el-form @submit.prevent label-width="100px">
               <el-form-item label="事件类型">
                 <el-select v-model="simulateForm.eventType">
                   <el-option label="礼物 gift" value="gift" />
@@ -119,14 +119,14 @@
               </el-form-item>
               <p class="tip">gift 建议填写目标选手；like/comment 会按当前场控目标自动归属。</p>
               <div class="form-actions">
-                <el-button type="primary" @click="submitSimulate">注入并刷新</el-button>
+                <el-button native-type="button" type="primary" @click="submitSimulate">注入并刷新</el-button>
               </div>
             </el-form>
           </el-card>
 
           <el-card class="panel-card">
             <div class="panel-title">手动调分</div>
-            <el-form label-width="100px">
+            <el-form @submit.prevent label-width="100px">
               <el-form-item label="目标类型">
                 <el-select v-model="manualForm.targetType">
                   <el-option label="选手 player" value="player" />
@@ -142,21 +142,21 @@
               <el-form-item label="人气变动"><el-input-number v-model="manualForm.rawValue" /></el-form-item>
               <el-form-item label="原因"><el-input v-model="manualForm.reason" /></el-form-item>
               <div class="form-actions">
-                <el-button type="warning" @click="submitManualAdjust">确认调分</el-button>
+                <el-button native-type="button" type="warning" @click="submitManualAdjust">确认调分</el-button>
               </div>
             </el-form>
           </el-card>
 
           <el-card class="panel-card">
             <div class="panel-title">团队人气均分</div>
-            <el-form label-width="100px">
+            <el-form @submit.prevent label-width="100px">
               <el-form-item label="团队 ID"><el-input-number v-model="distributionForm.teamId" :min="1" /></el-form-item>
               <el-form-item label="轮次 ID"><el-input-number v-model="distributionForm.roundId" :min="1" /></el-form-item>
               <el-form-item label="方式"><el-tag type="success">equal 均分</el-tag></el-form-item>
               <el-form-item label="原因"><el-input v-model="distributionForm.reason" /></el-form-item>
               <p class="tip warning-text">P0 只做 equal。点击后会把团队池当前余额分配给成员，请确认直播流程。</p>
               <div class="form-actions">
-                <el-button type="danger" @click="submitDistribution">确认均分</el-button>
+                <el-button native-type="button" type="danger" @click="submitDistribution">确认均分</el-button>
               </div>
             </el-form>
           </el-card>
@@ -167,10 +167,10 @@
         <div class="grid-two">
           <el-card class="panel-card">
             <div class="panel-title">选手管理</div>
-            <el-form inline>
+            <el-form @submit.prevent inline>
               <el-form-item label="姓名"><el-input v-model="playerForm.name" /></el-form-item>
               <el-form-item label="序号"><el-input-number v-model="playerForm.number" :min="1" /></el-form-item>
-              <el-form-item><el-button type="primary" @click="submitPlayer">新增选手</el-button></el-form-item>
+              <el-form-item><el-button native-type="button" type="primary" @click="submitPlayer">新增选手</el-button></el-form-item>
             </el-form>
             <el-table :data="players" size="small" height="260">
               <el-table-column prop="number" label="序号" width="80" />
@@ -182,9 +182,9 @@
 
           <el-card class="panel-card">
             <div class="panel-title">队伍管理</div>
-            <el-form inline>
+            <el-form @submit.prevent inline>
               <el-form-item label="队名"><el-input v-model="teamForm.name" /></el-form-item>
-              <el-form-item><el-button type="primary" @click="submitTeam">新增队伍</el-button></el-form-item>
+              <el-form-item><el-button native-type="button" type="primary" @click="submitTeam">新增队伍</el-button></el-form-item>
             </el-form>
             <el-table :data="teams" size="small" height="260">
               <el-table-column prop="teamId" label="ID" width="80" />
@@ -194,7 +194,7 @@
 
           <el-card class="panel-card">
             <div class="panel-title">轮次管理</div>
-            <el-form label-width="90px">
+            <el-form @submit.prevent label-width="90px">
               <el-form-item label="名称"><el-input v-model="roundForm.name" /></el-form-item>
               <el-form-item label="开始时间"><el-date-picker v-model="roundForm.startTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" /></el-form-item>
               <el-form-item label="结束时间"><el-date-picker v-model="roundForm.endTime" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" /></el-form-item>
@@ -205,7 +205,7 @@
                   <el-option label="completed" value="completed" />
                 </el-select>
               </el-form-item>
-              <div class="form-actions"><el-button type="primary" @click="submitRound">新增轮次</el-button></div>
+              <div class="form-actions"><el-button native-type="button" type="primary" @click="submitRound">新增轮次</el-button></div>
             </el-form>
             <el-table :data="rounds" size="small" height="260">
               <el-table-column prop="roundId" label="ID" width="70" />
@@ -213,7 +213,7 @@
               <el-table-column prop="status" label="状态" width="110" />
               <el-table-column label="操作" width="130">
                 <template #default="scope">
-                  <el-button size="small" type="warning" @click="activateRound(scope.row)">设为 active</el-button>
+                  <el-button native-type="button" size="small" type="warning" @click="activateRound(scope.row)">设为 active</el-button>
                 </template>
               </el-table-column>
             </el-table>
@@ -221,11 +221,11 @@
 
           <el-card class="panel-card">
             <div class="panel-title">分队与卧底设置</div>
-            <el-form inline>
+            <el-form @submit.prevent inline>
               <el-form-item label="轮次 ID"><el-input-number v-model="playerRoundFilterRoundId" :min="1" /></el-form-item>
-              <el-form-item><el-button @click="refreshPlayerRounds">查询</el-button></el-form-item>
+              <el-form-item><el-button native-type="button" @click="refreshPlayerRounds">查询</el-button></el-form-item>
             </el-form>
-            <el-form label-width="90px">
+            <el-form @submit.prevent label-width="90px">
               <el-form-item label="选手 ID"><el-input-number v-model="playerRoundForm.playerId" :min="1" /></el-form-item>
               <el-form-item label="队伍 ID"><el-input-number v-model="playerRoundForm.teamId" :min="1" /></el-form-item>
               <el-form-item label="是否卧底"><el-switch v-model="playerRoundForm.isSpy" /></el-form-item>
@@ -236,7 +236,7 @@
                   <el-option label="eliminated" value="eliminated" />
                 </el-select>
               </el-form-item>
-              <div class="form-actions"><el-button type="primary" @click="submitPlayerRound">保存分队</el-button></div>
+              <div class="form-actions"><el-button native-type="button" type="primary" @click="submitPlayerRound">保存分队</el-button></div>
             </el-form>
             <el-table :data="playerRounds" size="small" height="240">
               <el-table-column prop="number" label="序号" width="70" />
@@ -308,10 +308,30 @@ async function refreshBoard() {
   board.value = await getAdminBoard(boardTab.value, boardRoundId.value)
 }
 
+function getNextPlayerNumber() {
+  const maxNumber = players.value.reduce((max, player) => {
+    const number = Number(player.number) || 0
+    return number > max ? number : max
+  }, 0)
+  return maxNumber + 1
+}
+
+function resetPlayerForm() {
+  playerForm.name = ''
+  playerForm.number = getNextPlayerNumber()
+}
+
+function resetTeamForm() {
+  teamForm.name = ''
+}
+
 async function refreshBasicData() {
   players.value = await listPlayers()
   teams.value = await listTeams()
   rounds.value = await listRounds()
+  if (!playerForm.name.trim()) {
+    playerForm.number = getNextPlayerNumber()
+  }
 }
 
 async function refreshPlayerRounds() {
@@ -340,11 +360,17 @@ async function submitDistribution() {
 }
 
 async function submitPlayer() {
-  await runAction('选手已新增', () => createPlayer(withOperator(playerForm)), refreshBasicData)
+  await runAction('选手已新增', () => createPlayer(withOperator({ ...playerForm })), async () => {
+    await refreshBasicData()
+    resetPlayerForm()
+  })
 }
 
 async function submitTeam() {
-  await runAction('队伍已新增', () => createTeam(withOperator(teamForm)), refreshBasicData)
+  await runAction('队伍已新增', () => createTeam(withOperator({ ...teamForm })), async () => {
+    await refreshBasicData()
+    resetTeamForm()
+  })
 }
 
 async function submitRound() {

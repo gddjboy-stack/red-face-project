@@ -14,6 +14,12 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
       ...(options.headers || {})
     }
   })
+
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error(`接口返回异常（状态 ${response.status}），请检查后端服务或代理是否正常`)
+  }
+
   const payload = (await response.json()) as ApiResponse<T>
   if (!response.ok || payload.code !== 0) {
     throw new Error(payload.message || `请求失败：${response.status}`)
