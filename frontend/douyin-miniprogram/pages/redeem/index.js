@@ -9,7 +9,10 @@ Page({
     errorMessage: '',
     remainingSeconds: 0
   },
-  async onLoad() {
+  async onLoad(options) {
+    if (options && options.token) {
+      this.setData({ token: String(options.token).trim().toUpperCase() })
+    }
     try {
       await ensureLogin()
     } catch (error) {

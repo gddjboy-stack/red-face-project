@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no,email=no,address=no">
+  <title>红颜·局中局核销引导</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="page-shell">
+    <section class="card" aria-labelledby="pageTitle">
+      <p class="eyebrow">红颜·局中局</p>
+      <h1 id="pageTitle">核销凭证引导</h1>
+      <p class="intro">
+        请复制下方核销凭证，并在抖音小程序核销页完成确认。若平台跳转链接已配置，本页会显示小程序打开入口。
+      </p>
+
+      <div class="field-group" id="tokenPanel">
+        <label class="field-label" for="tokenValue">核销凭证</label>
+        <output class="token-value" id="tokenValue" for="tokenValue">读取中</output>
+      </div>
+
+      <div class="field-group order-field is-hidden" id="orderPanel">
+        <span class="field-label">订单号</span>
+        <span class="order-value" id="orderValue"></span>
+        <span class="field-note">仅用于人工核对，本页不上报后端。</span>
+      </div>
+
+      <p class="status-message" id="statusMessage" role="status" aria-live="polite"></p>
+
+      <div class="actions">
+        <a class="primary-action is-hidden" id="openMiniProgramLink" href="#" rel="noopener">打开小程序核销页</a>
+        <button class="secondary-action" id="copyTokenButton" type="button">复制核销凭证</button>
+      </div>
+
+      <section class="fallback-guide" id="fallbackGuide" aria-labelledby="fallbackTitle">
+        <h2 id="fallbackTitle">手动核销路径</h2>
+        <p>复制核销凭证后，请打开抖音 App，进入“红颜·局中局”小程序，在核销页粘贴凭证并点击确认核销。</p>
+      </section>
+    </section>
+  </main>
+
+  <script src="./script.js"></script>
+</body>
+</html>
