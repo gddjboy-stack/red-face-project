@@ -20,8 +20,8 @@ CREATE TABLE teams (
 CREATE TABLE rounds (
   round_id    INT NOT NULL AUTO_INCREMENT,
   name        VARCHAR(100) NOT NULL,
-  start_time  TIMESTAMP NOT NULL,
-  end_time    TIMESTAMP NOT NULL,
+  start_time  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '轮次开始时间，创建时显式赋值',
+  end_time    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '轮次结束时间，创建时显式赋值',
   status      VARCHAR(20) NOT NULL DEFAULT 'upcoming' COMMENT 'upcoming/active/completed',
   PRIMARY KEY (round_id)
 ) ENGINE=InnoDB COMMENT='赛事轮次表';
@@ -52,7 +52,7 @@ CREATE TABLE popularity_ledger (
   operator_id      VARCHAR(64) NULL,
   reason           VARCHAR(500) NULL,
   metadata         JSON NULL,
-  occurred_at      TIMESTAMP NOT NULL,
+  occurred_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '流水发生时间',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (ledger_id),
   UNIQUE KEY uq_idem (idempotency_key),
@@ -155,7 +155,7 @@ CREATE TABLE user_identity (
 CREATE TABLE user_session (
   token        VARCHAR(128) NOT NULL,
   user_id      VARCHAR(64) NOT NULL,
-  expires_at   TIMESTAMP NOT NULL,
+  expires_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '会话过期时间，登录时由代码显式写入',
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (token),
@@ -165,7 +165,7 @@ CREATE TABLE user_session (
 -- C16 用户会员有效期聚合表：只保存正向叠加后的当前有效期
 CREATE TABLE user_membership (
   user_id          VARCHAR(64) NOT NULL COMMENT '脱敏用户标识',
-  membership_until TIMESTAMP NOT NULL COMMENT '当前会员有效期截止时间',
+  membership_until TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '当前会员有效期截止时间，核销时显式写入',
   last_token_id    VARCHAR(32) NULL COMMENT '最近一次增加会员的卡密',
   created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
