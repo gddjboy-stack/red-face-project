@@ -1,0 +1,53 @@
+# ============================================================
+# 红颜局中局 后端 生产/默认配置
+# 任务卡 C-DEPLOY-01 交付物。所有密钥一律走环境变量占位，仓库内严禁明文。
+# ============================================================
+spring:
+  application:
+    name: redface-backend
+
+  # 数据源：生产 MySQL。密码及所有敏感项一律环境变量注入，仓库内无明文。
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:redface}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  # 生产环境不自动建表：建库与执行 db/db_schema.sql 全部由运维手工完成（见 DEPLOY.md）。
+  sql:
+    init:
+      mode: never
+
+server:
+  port: ${SERVER_PORT:8080}
+
+# MyBatis：15 个 Mapper 均为注解式，无 XML，故不配置 mapper-locations。
+# 开启下划线转驼峰作为双保险（现有注解 SQL 已手写别名，保留不动）。
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 健康检查：仅暴露 health 供运维探针匿名访问；不暴露 env/beans/configprops 等敏感端点。
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# ------------------------------------------------------------
+# 业务自定义配置
+# ------------------------------------------------------------
+redface:
+  # 场控后台 Admin 鉴权 token。
+  # 生产必须通过环境变量 ADMIN_TOKEN 注入足够强的随机串。
+  # 留空时（如本地/dev/test 未配置）拦截器放行并打印告警，便于联调；
+  # 生产一旦配置该值，/api/admin/** 无正确 X-Admin-Token 一律 401。
+  admin:
+    token: ${ADMIN_TOKEN:}
+
+# 说明：
+# - 默认（未激活 prod profile）使用 MockAuthProvider，登录形同虚设，严禁对公众开放。
+# - 6/22 正式测试须设 SPRING_PROFILES_ACTIVE=prod 切换真实抖音登录（DouyinAuthProvider 由 C-AUTH-01 提供）。

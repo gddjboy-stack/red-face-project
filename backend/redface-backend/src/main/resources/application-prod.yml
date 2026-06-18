@@ -1,0 +1,18 @@
+# ============================================================
+# 生产 profile（SPRING_PROFILES_ACTIVE=prod 时生效）
+# 在此 profile 下：
+#   - DouyinAuthProvider（@Profile("prod")，由 C-AUTH-01 提供）启用，真实抖音登录；
+#   - MockAuthProvider（@Profile("!prod")）自动失效。
+# 注意：prod 启动前，C-AUTH-01 的 DouyinAuthProvider 必须已合并，否则会因找不到
+#       AuthProvider Bean 启动失败。本卡仅负责接线，不实现该类。
+# 抖音登录所需 AppID / AppSecret 一律环境变量注入：
+#   DOUYIN_APP_ID / DOUYIN_APP_SECRET（严禁明文写入仓库）。
+# ============================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+douyin:
+  app-id: ${DOUYIN_APP_ID}
+  app-secret: ${DOUYIN_APP_SECRET}
