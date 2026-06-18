@@ -10,7 +10,16 @@
           <el-input v-model="operatorId" placeholder="输入操作员 ID，例如 john/director" @change="saveOperator">
             <template #prepend>operatorId</template>
           </el-input>
-          <p class="tip">彩排版临时鉴权：顶部输入一次，后续请求自动携带。上线前由 C18 替换为正式权限。</p>
+          <el-input
+            v-model="adminToken"
+            type="password"
+            show-password
+            placeholder="输入管理口令 ADMIN_TOKEN"
+            @change="saveAdminTokenValue"
+          >
+            <template #prepend>管理口令</template>
+          </el-input>
+          <p class="tip">管理口令：由运维私密下发，顶部输入一次即可，仅存本地、不进代码。口令无效会提示重输。</p>
         </div>
       </div>
     </el-card>
@@ -257,9 +266,40 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { distributeTeam, getAdminBoard, getAdminHome, getSuspicionStatus, manualAdjust, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
+import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
 const operatorId = ref(localStorage.getItem('operatorId') || 'director')
+const adminToken = ref(getAdminToken())
+
+function saveAdminTokenValue() {
+  const value = adminToken.value.trim()
+  if (value) {
+    setAdminToken(value)
+    ElMessage.success('管理口令已保存（仅存本地）')
+  } else {
+    clearAdminToken()
+  }
+}
+
+/** 提示运营输入管理口令（首次进入或 401 后）。 */
+async function promptAdminToken(message: string) {
+  try {
+    const { value } = await ElMessageBox.prompt(message, '输入管理口令', {
+      confirmButtonText: '保存',
+      cancelButtonText: '稍后',
+      inputType: 'password',
+      inputPlaceholder: '请输入运维下发的 ADMIN_TOKEN'
+    })
+    if (value && value.trim()) {
+      adminToken.value = value.trim()
+      setAdminToken(adminToken.value)
+      ElMessage.success('管理口令已保存，请重试操作')
+    }
+  } catch {
+    /* 用户取消，不处理 */
+  }
+}
 const home = ref<any>({})
 const board = ref<any>({ items: [] })
 const suspicionStatus = ref<any>({ candidates: [] })
@@ -389,6 +429,15 @@ async function submitPlayerRound() {
 
 onMounted(async () => {
   saveOperator()
+  // 注册 401 处理：http 层收到 401 会清空旧口令并触发此回调，提示运营重输。
+  setUnauthorizedHandler(() => {
+    adminToken.value = ''
+    promptAdminToken('管理口令无效或已过期，请重新输入。')
+  })
+  // 首次进入未设置口令时主动提示输入（生产后端已开鉴权，不输将全部 401）。
+  if (!getAdminToken()) {
+    await promptAdminToken('请输入运维下发的管理口令 ADMIN_TOKEN，否则场控后台操作将被拒绝。')
+  }
   await refreshBasicData()
   await refreshMonitor()
 })
