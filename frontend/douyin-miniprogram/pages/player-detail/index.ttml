@@ -1,0 +1,35 @@
+<view class="container player-detail-page">
+  <view class="page-title">
+    <text>选手详情</text>
+    <text class="muted">{{detail.roundName || '当前轮次'}}</text>
+  </view>
+
+  <view class="card detail-card">
+    <view class="detail-head">
+      <view class="number-badge">{{detail.number || '-'}}</view>
+      <view class="detail-main">
+        <view class="detail-name">{{detail.name || '--'}}</view>
+        <view class="muted">{{detail.teamName || '暂未分队'}}</view>
+      </view>
+    </view>
+    <view class="metric-row">
+      <text>当前人气值</text>
+      <text class="number-strong">{{popularityText}}</text>
+    </view>
+    <view class="support-hint">{{detail.supportHint || '增加人气值请在直播间进行。'}}</view>
+  </view>
+
+  <view class="section-title">写真预览</view>
+  <view tt:if="{{photos.length === 0}}" class="card">
+    <empty-state text="暂无写真预览" icon="□" />
+  </view>
+  <view tt:else class="photo-grid">
+    <view class="photo-card" tt:for="{{photos}}" tt:key="assetId">
+      <image tt:if="{{!item.imageError && item.previewUrl}}" class="photo-img safe-image" src="{{item.previewUrl}}" mode="aspectFill" binderror="onImageError" data-index="{{index}}" />
+      <image tt:else class="photo-img safe-image" src="/assets/placeholders/photo_clean_stage.svg" mode="aspectFill" />
+    </view>
+  </view>
+
+  <button class="secondary-btn" bindtap="goRedeem">核销明信片卡密</button>
+  <button class="ghost-btn" bindtap="loadDetail" loading="{{loading}}">刷新详情</button>
+</view>

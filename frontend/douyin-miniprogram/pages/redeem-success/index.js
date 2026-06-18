@@ -27,7 +27,7 @@ Page({
     this.setData({ imageError: true })
   },
   goPhotos() {
-    tt.switchTab({ url: '/pages/my-photos/index' })
+    tt.navigateTo({ url: '/pages/my-photos/index' })
   },
   goHome() {
     tt.switchTab({ url: '/pages/home/index' })

@@ -1,10 +1,11 @@
 const { ensureLogin } = require('../../utils/auth')
-const { getPopularityBoard } = require('../../utils/api')
+const { getPlayers } = require('../../utils/api')
 const { formatNumber } = require('../../utils/format')
 
 Page({
   data: {
-    roundId: 1,
+    roundId: '',
+    roundName: '',
     loading: false,
     items: []
   },
@@ -13,19 +14,42 @@ Page({
     await this.loadPlayers()
   },
   onRoundInput(event) {
-    this.setData({ roundId: Number(event.detail.value || 1) })
+    this.setData({ roundId: event.detail.value || '' })
   },
   async loadPlayers() {
     this.setData({ loading: true })
     try {
-      const board = await getPopularityBoard('player', this.data.roundId)
-      const items = (board.items || []).map(item => ({ ...item, valueText: formatNumber(item.value) }))
-      // 选手 Tab 按 Claude 方案 B 复用 API-2 player 顺序，不实现完整选手详情。
-      this.setData({ items })
+      const data = await getPlayers(this.data.roundId)
+      const items = (data.items || []).map(item => ({
+        ...item,
+        imageError: false,
+        valueText: formatNumber(item.popularityValue)
+      }))
+      this.setData({
+        roundId: data.roundId || this.data.roundId || '',
+        roundName: data.roundName || '当前轮次',
+        items
+      })
     } catch (error) {
       tt.showToast({ title: error.message || '获取选手失败', icon: 'none' })
     } finally {
       this.setData({ loading: false })
+    }
+  },
+  goDetail(event) {
+    const playerId = event.currentTarget.dataset.playerId
+    if (!playerId) {
+      return
+    }
+    const roundQuery = this.data.roundId ? `&roundId=${encodeURIComponent(this.data.roundId)}` : ''
+    tt.navigateTo({ url: `/pages/player-detail/index?playerId=${encodeURIComponent(playerId)}${roundQuery}` })
+  },
+  onImageError(event) {
+    const index = event.currentTarget.dataset.index
+    const items = this.data.items.slice()
+    if (items[index]) {
+      items[index].imageError = true
+      this.setData({ items })
     }
   }
 })

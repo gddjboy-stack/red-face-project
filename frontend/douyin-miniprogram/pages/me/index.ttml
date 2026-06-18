@@ -1,0 +1,30 @@
+<view class="container me-page">
+  <view class="page-title">
+    <text>我的</text>
+    <text class="muted">个人状态</text>
+  </view>
+
+  <view class="card member-card {{membershipActive ? 'active' : ''}}">
+    <view class="card-title">会员状态</view>
+    <view class="member-text">{{membershipText}}</view>
+  </view>
+
+  <view class="card action-card" bindtap="goPhotos">
+    <view>
+      <view class="card-title">我的写真</view>
+      <view class="muted">已收藏 {{total}} 张数字写真</view>
+    </view>
+    <view class="action-arrow">查看</view>
+  </view>
+
+  <view class="card action-card" bindtap="goRedeem">
+    <view>
+      <view class="card-title">核销明信片卡密</view>
+      <view class="muted">核销成功后可增加人气值并收藏写真</view>
+    </view>
+    <view class="action-arrow">前往</view>
+  </view>
+
+  <view class="safe-note">购买与增加人气值请在直播间完成。页面仅展示已获得的用户权益。</view>
+  <button class="ghost-btn" bindtap="loadMe" loading="{{loading}}">刷新我的信息</button>
+</view>

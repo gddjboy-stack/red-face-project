@@ -8,6 +8,16 @@ function getPopularityBoard(tab, roundId) {
   return request({ url: `/api/popularity/board?tab=${encodeURIComponent(tab)}&roundId=${roundId}` })
 }
 
+function getPlayers(roundId) {
+  const query = roundId ? `?roundId=${encodeURIComponent(roundId)}` : ''
+  return request({ url: `/api/players${query}` })
+}
+
+function getPlayerDetail(playerId, roundId) {
+  const query = roundId ? `?roundId=${encodeURIComponent(roundId)}` : ''
+  return request({ url: `/api/players/${encodeURIComponent(playerId)}${query}` })
+}
+
 function redeemToken(token) {
   return request({
     url: '/api/tokens/redeem',
@@ -36,6 +46,8 @@ function getMyPhotos() {
 module.exports = {
   getLiveHome,
   getPopularityBoard,
+  getPlayers,
+  getPlayerDetail,
   redeemToken,
   getSuspicionStatus,
   submitSuspicion,

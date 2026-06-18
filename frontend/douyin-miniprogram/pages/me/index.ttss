@@ -1,0 +1,7 @@
+.member-card { margin-bottom: 22rpx; background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(247,239,233,.95)); }
+.member-card.active { background: linear-gradient(135deg, rgba(231,163,65,.18), rgba(255,255,255,.95)); }
+.card-title { font-size: 30rpx; font-weight: 800; color: #4b3d44; margin-bottom: 10rpx; }
+.member-text { color:#d69a36; font-size:28rpx; font-weight:800; line-height:1.6; }
+.action-card { display:flex; align-items:center; justify-content:space-between; margin-bottom:18rpx; }
+.action-arrow { color:#d69a36; font-weight:800; font-size:26rpx; }
+.safe-note { margin:26rpx 0; padding:20rpx; border-radius:18rpx; background:rgba(130,118,125,.08); color:#82767d; font-size:24rpx; line-height:1.6; }
