@@ -11,6 +11,7 @@ public class RedeemResult {
     private final Integer playerId;
     private final long points;
     private final String photoAssetId;
+    private final UserMembershipSummary membership;
     private final long remainingSeconds;
 
     private RedeemResult(boolean success,
@@ -20,6 +21,7 @@ public class RedeemResult {
                          Integer playerId,
                          long points,
                          String photoAssetId,
+                         UserMembershipSummary membership,
                          long remainingSeconds) {
         this.success = success;
         this.code = code;
@@ -28,6 +30,7 @@ public class RedeemResult {
         this.playerId = playerId;
         this.points = points;
         this.photoAssetId = photoAssetId;
+        this.membership = membership;
         this.remainingSeconds = remainingSeconds;
     }
 
@@ -40,8 +43,8 @@ public class RedeemResult {
      * @param photoAssetId 写真资产 ID
      * @return 成功结果
      */
-    public static RedeemResult success(String tokenId, Integer playerId, long points, String photoAssetId) {
-        return new RedeemResult(true, "success", "核销成功", tokenId, playerId, points, photoAssetId, 0L);
+    public static RedeemResult success(String tokenId, Integer playerId, long points, String photoAssetId, UserMembershipSummary membership) {
+        return new RedeemResult(true, "success", "核销成功", tokenId, playerId, points, photoAssetId, membership, 0L);
     }
 
     /**
@@ -50,7 +53,7 @@ public class RedeemResult {
      * @return 重复核销结果
      */
     public static RedeemResult alreadyUsed() {
-        return new RedeemResult(false, "already_used", "卡密已被核销", null, null, 0L, null, 0L);
+        return new RedeemResult(false, "already_used", "卡密已被核销", null, null, 0L, null, null, 0L);
     }
 
     /**
@@ -61,7 +64,7 @@ public class RedeemResult {
      * @return 失败结果
      */
     public static RedeemResult fail(String code, String message) {
-        return new RedeemResult(false, code, message, null, null, 0L, null, 0L);
+        return new RedeemResult(false, code, message, null, null, 0L, null, null, 0L);
     }
 
     /**
@@ -71,7 +74,7 @@ public class RedeemResult {
      * @return 锁定结果
      */
     public static RedeemResult locked(long remainingSeconds) {
-        return new RedeemResult(false, "locked", "连续错误次数过多，请稍后再试", null, null, 0L, null, remainingSeconds);
+        return new RedeemResult(false, "locked", "连续错误次数过多，请稍后再试", null, null, 0L, null, null, remainingSeconds);
     }
 
     public boolean isSuccess() {
@@ -100,6 +103,10 @@ public class RedeemResult {
 
     public String getPhotoAssetId() {
         return photoAssetId;
+    }
+
+    public UserMembershipSummary getMembership() {
+        return membership;
     }
 
     public long getRemainingSeconds() {

@@ -1,6 +1,7 @@
 package com.redface.query;
 
 import com.redface.dto.RedeemResponse;
+import com.redface.dto.UserMembershipSummary;
 import com.redface.mapper.C9QueryMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -16,7 +17,7 @@ public class RedeemViewService {
         this.c9QueryMapper = c9QueryMapper;
     }
 
-    public RedeemResponse getRedeemResponse(String tokenId, String userId) {
+    public RedeemResponse getRedeemResponse(String tokenId, String userId, UserMembershipSummary membership) {
         if (!StringUtils.hasText(tokenId)) {
             throw new IllegalArgumentException("tokenId不能为空");
         }
@@ -24,6 +25,16 @@ public class RedeemViewService {
         if (response == null) {
             throw new IllegalStateException("核销成功后未找到页面级核销结果");
         }
+        applyMembership(response, membership);
         return response;
+    }
+
+    private void applyMembership(RedeemResponse response, UserMembershipSummary membership) {
+        if (membership == null) {
+            return;
+        }
+        response.setMembershipAddedDays(membership.getMembershipAddedDays());
+        response.setMembershipUntil(membership.getMembershipUntil());
+        response.setMemberActive(membership.isMemberActive());
     }
 }

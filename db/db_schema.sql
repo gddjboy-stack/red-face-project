@@ -162,6 +162,17 @@ CREATE TABLE user_session (
   KEY idx_user_session_user (user_id)
 ) ENGINE=InnoDB COMMENT='C9用户会话';
 
+-- C16 用户会员有效期聚合表：只保存正向叠加后的当前有效期
+CREATE TABLE user_membership (
+  user_id          VARCHAR(64) NOT NULL COMMENT '脱敏用户标识',
+  membership_until TIMESTAMP NOT NULL COMMENT '当前会员有效期截止时间',
+  last_token_id    VARCHAR(32) NULL COMMENT '最近一次增加会员的卡密',
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id),
+  KEY idx_membership_until (membership_until)
+) ENGINE=InnoDB COMMENT='C16用户会员有效期聚合表';
+
 CREATE TABLE suspicion_votes (
   vote_id           BIGINT NOT NULL AUTO_INCREMENT,
   user_id           VARCHAR(64) NOT NULL,

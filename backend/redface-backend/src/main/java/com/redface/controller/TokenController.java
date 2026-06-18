@@ -32,7 +32,7 @@ public class TokenController {
     public ResponseEntity<ApiResponse<?>> redeem(@CurrentUser String userId, @RequestBody RedeemRequest request) {
         RedeemResult result = tokenService.redeem(request == null ? null : request.getToken(), userId, "miniapp");
         if (result.isSuccess()) {
-            RedeemResponse response = redeemViewService.getRedeemResponse(result.getTokenId(), userId);
+            RedeemResponse response = redeemViewService.getRedeemResponse(result.getTokenId(), userId, result.getMembership());
             return ResponseEntity.ok(ApiResponse.success(response));
         }
         return ResponseEntity.ok(mapRedeemFailure(result));

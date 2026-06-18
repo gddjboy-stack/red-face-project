@@ -1,6 +1,7 @@
 -- H2 测试环境可能因不同 Spring 测试上下文重复初始化，先按外键反向顺序清理旧表。
 DROP TABLE IF EXISTS user_session;
 DROP TABLE IF EXISTS suspicion_votes;
+DROP TABLE IF EXISTS user_membership;
 DROP TABLE IF EXISTS user_photo_collection;
 DROP TABLE IF EXISTS tokens;
 DROP TABLE IF EXISTS photo_assets;
@@ -180,6 +181,17 @@ CREATE TABLE user_session (
   last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (token),
   KEY idx_user_session_user (user_id)
+);
+
+-- C16 用户会员有效期聚合表：只保存正向叠加后的当前有效期
+CREATE TABLE user_membership (
+  user_id          VARCHAR(64) NOT NULL,
+  membership_until TIMESTAMP NOT NULL,
+  last_token_id    VARCHAR(32) NULL,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id),
+  KEY idx_membership_until (membership_until)
 );
 
 CREATE TABLE suspicion_votes (

@@ -6,6 +6,7 @@
   <view class="card intro-card">
     <view class="intro-title">数字写真收藏</view>
     <view class="intro-text">核销成功后，写真会自动存入这里。图片如暂未加载，将显示清新舞台占位图。</view>
+    <view class="membership-status {{membershipActive ? 'active' : ''}}">{{membershipText}}</view>
   </view>
   <view tt:if="{{items.length === 0}}" class="card">
     <empty-state text="暂无收藏写真" icon="□" />

@@ -1,5 +1,5 @@
 const { REDEEM_SUCCESS_KEY } = require('../../utils/constants')
-const { formatNumber } = require('../../utils/format')
+const { formatNumber, formatDateTime } = require('../../utils/format')
 
 Page({
   data: {
@@ -7,7 +7,9 @@ Page({
     photoPreviewUrl: '',
     imageError: false,
     playerText: '--',
-    pointsText: '0'
+    pointsText: '0',
+    membershipAddedText: '',
+    membershipUntilText: ''
   },
   onLoad() {
     const payload = tt.getStorageSync(REDEEM_SUCCESS_KEY) || {}
@@ -16,6 +18,8 @@ Page({
       photoPreviewUrl: payload.photoPreviewUrl || '',
       playerText: payload.playerNumber ? `${payload.playerNumber}号 ${payload.playerName || ''}` : (payload.playerName || '--'),
       pointsText: formatNumber(payload.points),
+      membershipAddedText: payload.membershipAddedDays ? `会员有效期已增加 ${payload.membershipAddedDays} 天` : '',
+      membershipUntilText: payload.membershipUntil ? `会员有效期至：${formatDateTime(payload.membershipUntil)}` : '',
       imageError: false
     })
   },

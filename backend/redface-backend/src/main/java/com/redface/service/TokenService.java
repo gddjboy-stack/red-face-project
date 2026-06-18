@@ -3,6 +3,7 @@ package com.redface.service;
 import com.redface.config.AppConstants;
 import com.redface.dto.PopularityChangeRequest;
 import com.redface.dto.RedeemResult;
+import com.redface.dto.UserMembershipSummary;
 import com.redface.entity.TokenEntity;
 import com.redface.mapper.TokenMapper;
 import com.redface.mapper.UserPhotoCollectionMapper;
@@ -29,21 +30,24 @@ public class TokenService {
     private final FailureCounter failureCounter;
     private final UserPhotoCollectionMapper userPhotoCollectionMapper;
     private final RoundService roundService;
+    private final UserMembershipService userMembershipService;
 
     public TokenService(TokenMapper tokenMapper,
                         PopularityService popularityService,
                         FailureCounter failureCounter,
                         UserPhotoCollectionMapper userPhotoCollectionMapper,
-                        RoundService roundService) {
+                        RoundService roundService,
+                        UserMembershipService userMembershipService) {
         this.tokenMapper = tokenMapper;
         this.popularityService = popularityService;
         this.failureCounter = failureCounter;
         this.userPhotoCollectionMapper = userPhotoCollectionMapper;
         this.roundService = roundService;
+        this.userMembershipService = userMembershipService;
     }
 
     /**
-     * 核销卡密。固定流程:规范化 → 防爆破 → 轮次预检查 → 原子抢占 → 人气入账 → 写真收藏 → 返回。
+     * 核销卡密。固定流程:规范化 → 防爆破 → 轮次预检查 → 原子抢占 → 人气入账 → 写真收藏 → 会员+7天 → 返回。
      *
      * @param rawInput 用户输入卡密
      * @param userId   用户 ID
@@ -106,8 +110,11 @@ public class TokenService {
         // === 第6步:自动收藏写真 ===
         collectPhotoIfPresent(userId, token, t.getPhotoAssetId());
 
+        // === 第7步:C16 会员有效期正向叠加。必须处于 redeem 同一事务内。 ===
+        UserMembershipSummary membership = userMembershipService.grantSevenDays(userId, token);
+
         failureCounter.clear(userId);
-        return RedeemResult.success(token, t.getPlayerId(), t.getPoints(), t.getPhotoAssetId());
+        return RedeemResult.success(token, t.getPlayerId(), t.getPoints(), t.getPhotoAssetId(), membership);
     }
 
     private String normalize(String raw) {

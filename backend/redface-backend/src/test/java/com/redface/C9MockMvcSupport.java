@@ -26,6 +26,7 @@ abstract class C9MockMvcSupport {
     protected void clearTables() {
         jdbcTemplate.update("DELETE FROM user_session");
         jdbcTemplate.update("DELETE FROM suspicion_votes");
+        jdbcTemplate.update("DELETE FROM user_membership");
         jdbcTemplate.update("DELETE FROM user_identity");
         jdbcTemplate.update("DELETE FROM user_photo_collection");
         jdbcTemplate.update("DELETE FROM popularity_ledger");
@@ -115,5 +116,12 @@ abstract class C9MockMvcSupport {
                 INSERT INTO tokens (token_id, player_id, points, photo_asset_id, product_sku, status, created_at)
                 VALUES (?, ?, ?, ?, 'sku_c9', ?, ?)
                 """, tokenId, playerId, points, photoAssetId, status, LocalDateTime.now());
+    }
+
+    protected void insertMembership(String userId, LocalDateTime membershipUntil, String lastTokenId) {
+        jdbcTemplate.update("""
+                INSERT INTO user_membership (user_id, membership_until, last_token_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """, userId, membershipUntil, lastTokenId, LocalDateTime.now(), LocalDateTime.now());
     }
 }

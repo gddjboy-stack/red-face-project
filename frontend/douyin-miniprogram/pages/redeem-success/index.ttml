@@ -11,6 +11,10 @@
     <view class="info-row"><text>选手</text><text>{{playerText}}</text></view>
     <view class="info-row"><text>团队</text><text>{{payload.teamName || '--'}}</text></view>
     <view class="info-row"><text>增加人气值</text><text class="number-strong">{{pointsText}}</text></view>
+    <view tt:if="{{membershipAddedText}}" class="membership-box">
+      <view class="membership-title">{{membershipAddedText}}</view>
+      <view class="membership-desc">{{membershipUntilText}}</view>
+    </view>
     <button class="primary-btn" bindtap="goPhotos">查看我的写真</button>
     <button class="ghost-btn" bindtap="goHome">返回首页</button>
   </view>

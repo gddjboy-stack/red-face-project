@@ -6,7 +6,9 @@ Page({
   data: {
     loading: false,
     total: 0,
-    items: []
+    items: [],
+    membershipText: '暂未开通会员，核销明信片后将增加会员有效期。',
+    membershipActive: false
   },
   async onLoad() {
     await ensureLogin()
@@ -24,7 +26,12 @@ Page({
         imageError: false,
         createdAtText: formatDateTime(item.createdAt)
       }))
-      this.setData({ total: data.total || items.length, items })
+      const membership = data.membership || {}
+      const membershipActive = !!membership.memberActive
+      const membershipText = membershipActive && membership.membershipUntil
+        ? `会员有效期至：${formatDateTime(membership.membershipUntil)}`
+        : '暂未开通会员，核销明信片后将增加会员有效期。'
+      this.setData({ total: data.total || items.length, items, membershipText, membershipActive })
     } catch (error) {
       tt.showToast({ title: error.message || '获取写真失败', icon: 'none' })
     } finally {

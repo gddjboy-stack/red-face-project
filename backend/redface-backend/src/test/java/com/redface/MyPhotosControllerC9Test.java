@@ -39,7 +39,9 @@ class MyPhotosControllerC9Test extends C9MockMvcSupport {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.total").value(0))
                 .andExpect(jsonPath("$.data.items").isArray())
-                .andExpect(jsonPath("$.data.items.length()").value(0));
+                .andExpect(jsonPath("$.data.items.length()").value(0))
+                .andExpect(jsonPath("$.data.membership.memberActive").value(false))
+                .andExpect(jsonPath("$.data.membership.membershipRemainingDays").value(0));
     }
 
     @Test
@@ -55,6 +57,7 @@ class MyPhotosControllerC9Test extends C9MockMvcSupport {
                 INSERT INTO user_photo_collection (user_id, asset_id, token_id, created_at)
                 VALUES (?, ?, ?, ?)
                 """, userB, "photo_p5_0001", "RFZJ-2345-6789-EFGH", LocalDateTime.now());
+        insertMembership(userA, LocalDateTime.now().plusDays(7), "RFZJ-2345-6789-ABCD");
 
         mockMvc.perform(get("/api/me/photos").header("Authorization", "Bearer " + tokenA))
                 .andExpect(status().isOk())
@@ -63,7 +66,10 @@ class MyPhotosControllerC9Test extends C9MockMvcSupport {
                 .andExpect(jsonPath("$.data.items[0].assetId").value("photo_p3_0001"))
                 .andExpect(jsonPath("$.data.items[0].previewUrl").value("https://example.com/p3_preview.jpg"))
                 .andExpect(jsonPath("$.data.items[0].playerName").value("林夏"))
-                .andExpect(jsonPath("$.data.items[0].createdAt").exists());
+                .andExpect(jsonPath("$.data.items[0].createdAt").exists())
+                .andExpect(jsonPath("$.data.membership.memberActive").value(true))
+                .andExpect(jsonPath("$.data.membership.membershipUntil").exists())
+                .andExpect(jsonPath("$.data.membership.membershipRemainingDays").isNumber());
     }
 
     @Test
