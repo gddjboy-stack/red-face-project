@@ -99,7 +99,9 @@ export DOUYIN_APP_ID=<...> DOUYIN_APP_SECRET=<...>
 java -jar target/redface-backend-0.0.1-SNAPSHOT.jar
 ```
 
-> **前置依赖（重要）**：`prod` profile 下登录由 `DouyinAuthProvider`（任务卡 **C-AUTH-01** 产出）接管。**该类合并进 main 之前，请勿用 `prod` 启动**，否则会因找不到 `AuthProvider` Bean 而启动失败（`APPLICATION FAILED TO START`）。真实登录就绪前请用 5.1 默认方式兜底。
+> **真实登录已实现（C-AUTH-01）**：`prod` profile 下登录由 `DouyinAuthProvider` 接管（已合并进 main），调用抖音官方 `code2session` 用 code 换取 openid。启用 `prod` 必须同时配置 `DOUYIN_APP_ID` 与 `DOUYIN_APP_SECRET`，否则登录会失败报错（不会静默放行）。
+>
+> **L3 安全护栏（fail-fast）**：`prod` profile 启动时强制校验 `ADMIN_TOKEN` 非空，**若未配置则拒绝启动**（提示"生产环境必须配置 ADMIN_TOKEN"），从代码层面杜绝"忘配即 Admin 裸奔"。请务必在 `prod` 启动前设好 `ADMIN_TOKEN`。
 
 ---
 
