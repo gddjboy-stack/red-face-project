@@ -1,10 +1,13 @@
 package com.redface.web;
 
+import com.redface.config.PhotoStorageProperties;
 import com.redface.auth.CurrentUserArgumentResolver;
+import java.nio.file.Path;
 import java.util.List;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -15,16 +18,28 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final CurrentUserArgumentResolver currentUserArgumentResolver;
     private final AdminAuthInterceptor adminAuthInterceptor;
+    private final PhotoStorageProperties photoStorageProperties;
 
     public WebConfig(CurrentUserArgumentResolver currentUserArgumentResolver,
-                     AdminAuthInterceptor adminAuthInterceptor) {
+                     AdminAuthInterceptor adminAuthInterceptor,
+                     PhotoStorageProperties photoStorageProperties) {
         this.currentUserArgumentResolver = currentUserArgumentResolver;
         this.adminAuthInterceptor = adminAuthInterceptor;
+        this.photoStorageProperties = photoStorageProperties;
     }
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(currentUserArgumentResolver);
+    }
+
+
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        Path uploadDir = Path.of(photoStorageProperties.getUploadDir()).toAbsolutePath().normalize();
+        registry.addResourceHandler(photoStorageProperties.normalizedResourcePattern())
+                .addResourceLocations(uploadDir.toUri().toString());
     }
 
     @Override

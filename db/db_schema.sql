@@ -126,8 +126,16 @@ CREATE TABLE photo_assets (
   player_id    INT NOT NULL,
   preview_url  VARCHAR(500) NOT NULL,
   download_url VARCHAR(500) NULL,
+  status       VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT 'active/inactive',
+  is_cover     TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否选手封面图',
+  sort_order   INT NOT NULL DEFAULT 0 COMMENT '同一选手下展示排序',
+  file_name    VARCHAR(255) NULL COMMENT '原始文件名，仅记录展示，不用于落盘',
+  content_type VARCHAR(100) NULL COMMENT '真实图片 MIME 类型',
+  file_size    BIGINT NULL COMMENT '文件大小',
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (asset_id)
+  updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (asset_id),
+  KEY idx_photo_player_status (player_id, status, is_cover, sort_order)
 ) ENGINE=InnoDB COMMENT='数字写真资产';
 
 -- 用户写真收藏(核销后自动收藏)

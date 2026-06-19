@@ -38,8 +38,12 @@ export class UnauthorizedError extends Error {
 
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...((options.headers as Record<string, string>) || {})
+  }
+
+  // FormData 请求必须让浏览器自动生成 multipart boundary，不能手动写 Content-Type。
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json'
   }
 
   // 仅对 /api/admin/** 注入 Admin 口令；用户端等其它路径不带。
@@ -87,5 +91,13 @@ export function jsonPut<T>(url: string, data: unknown): Promise<T> {
   return request<T>(url, {
     method: 'PUT',
     body: JSON.stringify(data)
+  })
+}
+
+
+export function multipartPost<T>(url: string, data: FormData): Promise<T> {
+  return request<T>(url, {
+    method: 'POST',
+    body: data
   })
 }

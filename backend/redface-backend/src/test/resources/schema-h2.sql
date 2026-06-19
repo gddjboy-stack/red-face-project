@@ -147,8 +147,16 @@ CREATE TABLE photo_assets (
   player_id    INT NOT NULL,
   preview_url  VARCHAR(500) NOT NULL,
   download_url VARCHAR(500) NULL,
+  status       VARCHAR(20) NOT NULL DEFAULT 'active',
+  is_cover     TINYINT NOT NULL DEFAULT 0,
+  sort_order   INT NOT NULL DEFAULT 0,
+  file_name    VARCHAR(255) NULL,
+  content_type VARCHAR(100) NULL,
+  file_size    BIGINT NULL,
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (asset_id)
+  updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (asset_id),
+  KEY idx_photo_player_status (player_id, status, is_cover, sort_order)
 );
 
 -- 用户写真收藏(核销后自动收藏)

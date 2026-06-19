@@ -87,3 +87,20 @@ body {
 .warning-text {
   color: #b45309;
 }
+
+
+.photo-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #eaded6;
+  background: #f7f2ee;
+}
+
+.replace-input {
+  display: inline-block;
+  width: 118px;
+  margin-left: 8px;
+  font-size: 12px;
+}

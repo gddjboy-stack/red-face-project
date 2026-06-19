@@ -43,7 +43,8 @@ public interface PlayerQueryMapper {
                      SELECT pa.preview_url
                      FROM photo_assets pa
                      WHERE pa.player_id = p.player_id
-                     ORDER BY pa.created_at DESC, pa.asset_id DESC
+                       AND pa.status = 'active'
+                     ORDER BY pa.is_cover DESC, pa.sort_order ASC, pa.created_at DESC, pa.asset_id DESC
                      LIMIT 1
                    ) AS photoPreviewUrl
             FROM players p
@@ -80,7 +81,8 @@ public interface PlayerQueryMapper {
                    preview_url AS previewUrl
             FROM photo_assets
             WHERE player_id = #{playerId}
-            ORDER BY created_at DESC, asset_id DESC
+              AND status = 'active'
+            ORDER BY is_cover DESC, sort_order ASC, created_at DESC, asset_id DESC
             """)
     List<PlayerPhotoItem> findPhotosByPlayer(@Param("playerId") int playerId);
 }

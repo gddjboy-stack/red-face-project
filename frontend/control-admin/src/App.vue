@@ -257,6 +257,77 @@
           </el-card>
         </div>
       </el-tab-pane>
+
+      <el-tab-pane label="写真管理" name="photos">
+        <div class="grid-two">
+          <el-card class="panel-card">
+            <div class="panel-title">上传写真</div>
+            <p class="tip warning-text">仅上传清新/才艺/舞台风图片；禁止性感擦边素材。系统只接受 jpg/png/webp，禁止 SVG。</p>
+            <el-form @submit.prevent label-width="90px">
+              <el-form-item label="选手">
+                <el-select v-model="photoUploadForm.playerId" filterable style="width: 260px">
+                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.number}号 ${player.name}`" :value="player.playerId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="图片文件">
+                <input type="file" accept="image/jpeg,image/png,image/webp" @change="onPhotoFileChange" />
+              </el-form-item>
+              <el-form-item label="设为封面"><el-switch v-model="photoUploadForm.isCover" /></el-form-item>
+              <el-form-item label="排序"><el-input-number v-model="photoUploadForm.sortOrder" /></el-form-item>
+              <div class="form-actions">
+                <el-button native-type="button" type="primary" @click="submitPhotoUpload">上传写真</el-button>
+              </div>
+            </el-form>
+          </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">写真筛选</div>
+            <el-form @submit.prevent label-width="90px">
+              <el-form-item label="选手">
+                <el-select v-model="photoFilter.playerId" clearable filterable style="width: 260px">
+                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.number}号 ${player.name}`" :value="player.playerId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="状态">
+                <el-select v-model="photoFilter.status" clearable style="width: 160px">
+                  <el-option label="active" value="active" />
+                  <el-option label="inactive" value="inactive" />
+                </el-select>
+              </el-form-item>
+              <div class="form-actions"><el-button native-type="button" @click="refreshPhotos">刷新写真</el-button></div>
+            </el-form>
+            <p class="tip">下架只隐藏用户端新查询，不物理删除文件或用户收藏记录。</p>
+          </el-card>
+        </div>
+
+        <el-card class="panel-card">
+          <div class="panel-title">写真资产列表</div>
+          <el-table :data="photos" size="small" height="520">
+            <el-table-column label="预览" width="110">
+              <template #default="scope">
+                <img :src="scope.row.previewUrl" class="photo-thumb" alt="写真预览" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="assetId" label="assetId" width="210" />
+            <el-table-column label="选手" width="140">
+              <template #default="scope">{{ scope.row.playerNumber }}号 {{ scope.row.playerName }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="95" />
+            <el-table-column prop="isCover" label="封面" width="80" />
+            <el-table-column prop="sortOrder" label="排序" width="80" />
+            <el-table-column prop="contentType" label="类型" width="120" />
+            <el-table-column prop="fileSize" label="大小" width="100" />
+            <el-table-column label="操作" width="360" fixed="right">
+              <template #default="scope">
+                <el-button native-type="button" size="small" @click="copyPhotoUrl(scope.row)">复制 URL</el-button>
+                <el-button native-type="button" size="small" type="success" @click="markPhotoCover(scope.row)">设封面</el-button>
+                <el-button native-type="button" size="small" :type="scope.row.status === 'active' ? 'warning' : 'primary'" @click="togglePhotoStatus(scope.row)">{{ scope.row.status === 'active' ? '下架' : '恢复' }}</el-button>
+                <input class="replace-input" type="file" accept="image/jpeg,image/png,image/webp" @change="(event) => replacePhotoFile(scope.row, event)" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-tab-pane>
     </el-tabs>
   </main>
 </template>
@@ -266,6 +337,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { distributeTeam, getAdminBoard, getAdminHome, getSuspicionStatus, manualAdjust, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
+import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
 import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
@@ -309,6 +381,7 @@ const players = ref<any[]>([])
 const teams = ref<any[]>([])
 const rounds = ref<any[]>([])
 const playerRounds = ref<any[]>([])
+const photos = ref<any[]>([])
 const playerRoundFilterRoundId = ref(1)
 
 const collectForm = reactive({ mode: 'player', targetId: 1, roundId: 1 })
@@ -319,6 +392,8 @@ const playerForm = reactive({ name: '', number: 1 })
 const teamForm = reactive({ name: '' })
 const roundForm = reactive({ name: '', startTime: '', endTime: '', status: 'upcoming' })
 const playerRoundForm = reactive({ playerId: 1, teamId: 1, isSpy: false, playerStatus: 'normal' })
+const photoFilter = reactive<{ playerId: number | null; status: string | null }>({ playerId: null, status: 'active' })
+const photoUploadForm = reactive<{ playerId: number; isCover: boolean; sortOrder: number; file: File | null }>({ playerId: 1, isCover: true, sortOrder: 0, file: null })
 
 function saveOperator() {
   localStorage.setItem('operatorId', operatorId.value)
@@ -376,6 +451,54 @@ async function refreshBasicData() {
 
 async function refreshPlayerRounds() {
   playerRounds.value = await listPlayerRounds(playerRoundFilterRoundId.value)
+}
+
+async function refreshPhotos() {
+  photos.value = await listPhotos(photoFilter)
+}
+
+function onPhotoFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  photoUploadForm.file = input.files && input.files.length > 0 ? input.files[0] : null
+}
+
+async function submitPhotoUpload() {
+  if (!photoUploadForm.file) {
+    ElMessage.error('请选择jpg/png/webp图片文件')
+    return
+  }
+  await runAction('写真已上传', () => uploadPhoto(withOperator({
+    playerId: photoUploadForm.playerId,
+    isCover: photoUploadForm.isCover,
+    sortOrder: photoUploadForm.sortOrder,
+    file: photoUploadForm.file as File
+  })), async () => {
+    photoUploadForm.file = null
+    await refreshPhotos()
+  })
+}
+
+async function replacePhotoFile(row: any, event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files && input.files.length > 0 ? input.files[0] : null
+  if (!file) return
+  await ElMessageBox.confirm(`确认替换写真【${row.assetId}】的文件？assetId 会保持不变。`, '替换写真文件', { type: 'warning' })
+  await runAction('写真文件已替换', () => replacePhoto(row.assetId, { operatorId: operatorId.value, file }), refreshPhotos)
+  input.value = ''
+}
+
+async function markPhotoCover(row: any) {
+  await runAction('已设为封面', () => setPhotoCover(row.assetId, { operatorId: operatorId.value }), refreshPhotos)
+}
+
+async function togglePhotoStatus(row: any) {
+  const nextStatus = row.status === 'active' ? 'inactive' : 'active'
+  await runAction(nextStatus === 'active' ? '写真已恢复' : '写真已下架', () => updatePhotoStatus(row.assetId, { operatorId: operatorId.value, status: nextStatus }), refreshPhotos)
+}
+
+async function copyPhotoUrl(row: any) {
+  await navigator.clipboard.writeText(row.previewUrl)
+  ElMessage.success('图片 URL 已复制')
 }
 
 async function submitCollectState() {
@@ -439,6 +562,10 @@ onMounted(async () => {
     await promptAdminToken('请输入运维下发的管理口令 ADMIN_TOKEN，否则场控后台操作将被拒绝。')
   }
   await refreshBasicData()
+  if (players.value.length > 0) {
+    photoUploadForm.playerId = players.value[0].playerId
+  }
+  await refreshPhotos()
   await refreshMonitor()
 })
 </script>

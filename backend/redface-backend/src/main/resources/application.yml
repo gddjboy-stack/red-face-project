@@ -18,6 +18,11 @@ spring:
     init:
       mode: never
 
+  servlet:
+    multipart:
+      max-file-size: ${PHOTO_MAX_FILE_SIZE:5MB}
+      max-request-size: ${PHOTO_MAX_REQUEST_SIZE:6MB}
+
 server:
   port: ${SERVER_PORT:8080}
 
@@ -47,6 +52,13 @@ redface:
   # 生产一旦配置该值，/api/admin/** 无正确 X-Admin-Token 一律 401。
   admin:
     token: ${ADMIN_TOKEN:}
+
+  # C17 写真上传管理：P0 使用本地持久化目录 + 静态资源映射。
+  photo-storage:
+    upload-dir: ${PHOTO_UPLOAD_DIR:${user.home}/redface-uploads/photos}
+    public-path: ${PHOTO_PUBLIC_PATH:/uploads/photos/}
+    public-base-url: ${PHOTO_PUBLIC_BASE_URL:}
+    max-size-bytes: ${PHOTO_MAX_SIZE_BYTES:5242880}
 
 # 说明：
 # - 默认（未激活 prod profile）使用 MockAuthProvider，登录形同虚设，严禁对公众开放。
