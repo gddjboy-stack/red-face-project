@@ -129,3 +129,25 @@ java -jar target/redface-backend-0.0.1-SNAPSHOT.jar
 - `/api/admin/collect-state` 无 token / 错 token 均返回 `401`，正确 `X-Admin-Token` 返回 `200`；
 - `/actuator/health` 匿名返回 `200 {"status":"UP"}`；
 - 全部 67 个单元/集成测试通过。
+
+
+---
+
+## 九、常见问题（FAQ）
+
+### Q1. 执行 `db_schema.sql` 报错 `1067 - Invalid default value for 'end_time'`（或其它时间列）
+
+**原因**：MySQL 在严格模式下（`explicit_defaults_for_timestamp=OFF` 且 `sql_mode` 含 `NO_ZERO_DATE`）不允许 `TIMESTAMP NOT NULL` 列缺省默认值。
+
+**处理**：该问题已在仓库脚本中修复——相关时间列（`rounds.start_time/end_time`、`popularity_ledger.occurred_at`、`user_session.expires_at`、`user_membership.membership_until`）均已补 `DEFAULT CURRENT_TIMESTAMP`。请确保使用**最新的 `db/db_schema.sql`**（`git pull` 后再建表）。
+
+> 已在真实 MySQL 8.0 的严格模式（`explicit_defaults_for_timestamp` ON / OFF 两种）下验证：最新脚本可完整建成全部 19 张表、无报错。
+
+### Q2. 后端部署包里"没有前端"
+
+**这是正常的**：后端与前端**分开交付**。
+- 后端：本目录的 jar + `db_schema.sql` + 本文档；
+- 小程序前端：`frontend/douyin-miniprogram`，用「抖音开发者工具」打开并上传体验版；
+- 场控后台前端：`frontend/control-admin`，`pnpm build` 产出 `dist/` 后由 Nginx 托管（详见该目录 README）。
+
+两个前端均直接从 GitHub 仓库获取，不包含在后端部署包内。
