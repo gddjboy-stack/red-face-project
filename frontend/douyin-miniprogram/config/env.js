@@ -1,6 +1,6 @@
 // 体验版连生产：currentEnv 设为 'prod'（C-FE-01）。
-// 注意：baseURL 为根域，不带 /api、不带结尾斜杠；各请求路径自带 /api/...，
-// request.js 拼接为 `${baseURL}${url}`，最终形如 https://hongyanjuzhongju.cn/api/...
+// 注意：baseURL 为域名（不带 /api、不带结尾斜杠）；各请求路径自带 /api/...，
+// request.js 拼接为 `${baseURL}${url}`，最终形如 https://api.jiurongjs.com/api/...
 const currentEnv = 'prod'
 
 const configs = {
@@ -12,8 +12,9 @@ const configs = {
     baseURL: 'https://staging.example.com'
   },
   prod: {
-    // 生产根域，与抖音后台"request 合法域名"、运维 Nginx 绑定保持一致。
-    baseURL: 'https://hongyanjuzhongju.cn'
+    // 生产后端域名（运维部署在已过 ICP 的 jiurongjs.com 下的 api 子域），
+    // 与抖音后台"request 合法域名"、运维 Nginx 绑定保持一致。
+    baseURL: 'https://api.jiurongjs.com'
   }
 }
 
