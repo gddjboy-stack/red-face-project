@@ -59,6 +59,17 @@ public interface PopularityLedgerMapper {
     long countByIdempotencyKey(@Param("idempotencyKey") String idempotencyKey);
 
     /**
+     * 按幂等键反查该笔原始流水所归属的轮次，供退款回滚精确扣回原核销轮次使用（只读）。
+     *
+     * <p>C14 退款专用：退款必须把人气扣回核销当时记账的那一轮，避免跨轮退款扣错轮次导致账面对不上。
+     *
+     * @param idempotencyKey 原始入账流水的幂等键，例如 token_RFZJ-XXXX-XXXX-XXXX
+     * @return 该流水的 round_id；不存在或为空时返回 null
+     */
+    @Select("SELECT round_id FROM popularity_ledger WHERE idempotency_key = #{idempotencyKey}")
+    Integer findRoundIdByIdempotencyKey(@Param("idempotencyKey") String idempotencyKey);
+
+    /**
      * 汇总指定目标在指定轮次下的流水人气值，用于测试与审计校验。
      *
      * @param targetType 目标类型

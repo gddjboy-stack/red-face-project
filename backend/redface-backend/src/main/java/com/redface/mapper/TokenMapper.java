@@ -36,6 +36,23 @@ public interface TokenMapper {
                          @Param("source") String source);
 
     /**
+     * 原子抢占退款。只有 status='used' 时才会更新为 'refunded'，同一张卡密只能被退一次。
+     *
+     * <p>C14 退款防重复第一道防线：与 C5 核销同样采用条件 UPDATE + 检查影响行数的成熟模式。
+     * 只有返回 1 才代表退款抢占成功；返回 0 说明该卡不是 used 态（已退款或从未核销）。
+     *
+     * @param token 卡密
+     * @return 受影响行数；只有返回 1 才代表抢占成功
+     */
+    @Update("""
+            UPDATE tokens
+            SET status = 'refunded'
+            WHERE token_id = #{token}
+              AND status = 'used'
+            """)
+    int markRefundedIfUsed(@Param("token") String token);
+
+    /**
      * 根据卡密查询 token 记录。该方法只允许在原子抢占之后用于读取已抢占结果或区分失败原因。
      *
      * @param token 卡密

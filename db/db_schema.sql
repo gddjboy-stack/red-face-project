@@ -110,7 +110,7 @@ CREATE TABLE tokens (
   photo_asset_id VARCHAR(64) NULL COMMENT '绑定的数字写真资产',
   product_sku    VARCHAR(64) NULL,
   aqiso_batch_id VARCHAR(64) NULL COMMENT '导出给阿奇索的批次',
-  status         VARCHAR(20) NOT NULL DEFAULT 'unused' COMMENT 'unused/used',
+  status         VARCHAR(20) NOT NULL DEFAULT 'unused' COMMENT 'unused/used/refunded(C14退款)',
   order_id       VARCHAR(64) NULL,
   user_id        VARCHAR(64) NULL,
   redeem_source  VARCHAR(20) NULL COMMENT 'h5/manual/backend',
