@@ -53,7 +53,9 @@
                 </el-select>
               </el-form-item>
               <el-form-item label="roundId">
-                <el-input-number v-model="boardRoundId" :min="1" />
+                <el-select v-model="boardRoundId" filterable placeholder="请选择轮次" style="width: 180px" @change="refreshBoard">
+                  <el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" />
+                </el-select>
               </el-form-item>
               <el-form-item>
                 <el-button native-type="button" @click="refreshBoard">查询</el-button>
@@ -91,18 +93,27 @@
             <div class="panel-title">集赞目标切换</div>
             <el-form @submit.prevent label-width="100px">
               <el-form-item label="模式">
-                <el-select v-model="collectForm.mode">
+                <el-select v-model="collectForm.mode" @change="onCollectModeChange">
                   <el-option label="选手 player" value="player" />
                   <el-option label="团队 team" value="team" />
                   <el-option label="卧底 spy" value="spy" />
                   <el-option label="总池 pool" value="pool" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="目标 ID">
-                <el-input-number v-model="collectForm.targetId" :min="1" :disabled="collectForm.mode === 'pool'" />
+              <el-form-item label="目标">
+                <el-select v-model="collectForm.targetId" :disabled="collectForm.mode === 'pool'" filterable clearable placeholder="请选择目标" style="width: 220px">
+                  <template v-if="collectForm.mode === 'player' || collectForm.mode === 'spy'">
+                    <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+                  </template>
+                  <template v-else-if="collectForm.mode === 'team'">
+                    <el-option v-for="t in teams" :key="t.teamId" :label="t.name" :value="t.teamId" />
+                  </template>
+                </el-select>
               </el-form-item>
-              <el-form-item label="轮次 ID">
-                <el-input-number v-model="collectForm.roundId" :min="1" />
+              <el-form-item label="轮次">
+                <el-select v-model="collectForm.roundId" filterable placeholder="请选择轮次" style="width: 220px">
+                  <el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" />
+                </el-select>
               </el-form-item>
               <div class="form-actions">
                 <el-button native-type="button" type="primary" @click="submitCollectState">确认切换</el-button>
@@ -124,7 +135,9 @@
                 <el-input-number v-model="simulateForm.value" :min="1" />
               </el-form-item>
               <el-form-item label="目标选手">
-                <el-input-number v-model="simulateForm.targetId" :min="1" />
+                <el-select v-model="simulateForm.targetId" filterable clearable placeholder="请选择选手" style="width: 220px">
+                  <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+                </el-select>
               </el-form-item>
               <p class="tip">gift 建议填写目标选手；like/comment 会按当前场控目标自动归属。</p>
               <div class="form-actions">
@@ -137,17 +150,24 @@
             <div class="panel-title">手动调分</div>
             <el-form @submit.prevent label-width="100px">
               <el-form-item label="目标类型">
-                <el-select v-model="manualForm.targetType">
+                <el-select v-model="manualForm.targetType" @change="onManualTypeChange">
                   <el-option label="选手 player" value="player" />
                   <el-option label="团队 team" value="team" />
                   <el-option label="卧底 spy" value="spy" />
                   <el-option label="总池 pool" value="pool" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="目标 ID">
-                <el-input-number v-model="manualForm.targetId" :min="1" :disabled="manualForm.targetType === 'pool'" />
+              <el-form-item label="目标">
+                <el-select v-model="manualForm.targetId" :disabled="manualForm.targetType === 'pool'" filterable clearable placeholder="请选择目标" style="width: 220px">
+                  <template v-if="manualForm.targetType === 'player' || manualForm.targetType === 'spy'">
+                    <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+                  </template>
+                  <template v-else-if="manualForm.targetType === 'team'">
+                    <el-option v-for="t in teams" :key="t.teamId" :label="t.name" :value="t.teamId" />
+                  </template>
+                </el-select>
               </el-form-item>
-              <el-form-item label="轮次 ID"><el-input-number v-model="manualForm.roundId" :min="1" /></el-form-item>
+              <el-form-item label="轮次"><el-select v-model="manualForm.roundId" filterable placeholder="请选择轮次" style="width: 220px"><el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" /></el-select></el-form-item>
               <el-form-item label="人气变动"><el-input-number v-model="manualForm.rawValue" /></el-form-item>
               <el-form-item label="原因"><el-input v-model="manualForm.reason" /></el-form-item>
               <div class="form-actions">
@@ -159,8 +179,8 @@
           <el-card class="panel-card">
             <div class="panel-title">团队人气均分</div>
             <el-form @submit.prevent label-width="100px">
-              <el-form-item label="团队 ID"><el-input-number v-model="distributionForm.teamId" :min="1" /></el-form-item>
-              <el-form-item label="轮次 ID"><el-input-number v-model="distributionForm.roundId" :min="1" /></el-form-item>
+              <el-form-item label="团队"><el-select v-model="distributionForm.teamId" filterable clearable placeholder="请选择团队" style="width: 220px"><el-option v-for="t in teams" :key="t.teamId" :label="t.name" :value="t.teamId" /></el-select></el-form-item>
+              <el-form-item label="轮次"><el-select v-model="distributionForm.roundId" filterable placeholder="请选择轮次" style="width: 220px"><el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" /></el-select></el-form-item>
               <el-form-item label="方式"><el-tag type="success">equal 均分</el-tag></el-form-item>
               <el-form-item label="原因"><el-input v-model="distributionForm.reason" /></el-form-item>
               <p class="tip warning-text">P0 只做 equal。点击后会把团队池当前余额分配给成员，请确认直播流程。</p>
@@ -231,12 +251,12 @@
           <el-card class="panel-card">
             <div class="panel-title">分队与卧底设置</div>
             <el-form @submit.prevent inline>
-              <el-form-item label="轮次 ID"><el-input-number v-model="playerRoundFilterRoundId" :min="1" /></el-form-item>
+              <el-form-item label="轮次"><el-select v-model="playerRoundFilterRoundId" filterable placeholder="请选择轮次" style="width: 200px" @change="refreshPlayerRounds"><el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" /></el-select></el-form-item>
               <el-form-item><el-button native-type="button" @click="refreshPlayerRounds">查询</el-button></el-form-item>
             </el-form>
             <el-form @submit.prevent label-width="90px">
-              <el-form-item label="选手 ID"><el-input-number v-model="playerRoundForm.playerId" :min="1" /></el-form-item>
-              <el-form-item label="队伍 ID"><el-input-number v-model="playerRoundForm.teamId" :min="1" /></el-form-item>
+              <el-form-item label="选手"><el-select v-model="playerRoundForm.playerId" filterable clearable placeholder="请选择选手" style="width: 220px"><el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" /></el-select></el-form-item>
+              <el-form-item label="队伍"><el-select v-model="playerRoundForm.teamId" filterable clearable placeholder="请选择队伍" style="width: 220px"><el-option v-for="t in teams" :key="t.teamId" :label="t.name" :value="t.teamId" /></el-select></el-form-item>
               <el-form-item label="是否卧底"><el-switch v-model="playerRoundForm.isSpy" /></el-form-item>
               <el-form-item label="状态">
                 <el-select v-model="playerRoundForm.playerStatus">
@@ -376,22 +396,22 @@ const home = ref<any>({})
 const board = ref<any>({ items: [] })
 const suspicionStatus = ref<any>({ candidates: [] })
 const boardTab = ref('player')
-const boardRoundId = ref(1)
+const boardRoundId = ref<number | null>(null)
 const players = ref<any[]>([])
 const teams = ref<any[]>([])
 const rounds = ref<any[]>([])
 const playerRounds = ref<any[]>([])
 const photos = ref<any[]>([])
-const playerRoundFilterRoundId = ref(1)
+const playerRoundFilterRoundId = ref<number | null>(null)
 
-const collectForm = reactive({ mode: 'player', targetId: 1, roundId: 1 })
-const simulateForm = reactive({ eventType: 'like_delta', value: 10, targetId: 1 })
-const manualForm = reactive({ targetType: 'player', targetId: 1, roundId: 1, rawValue: 100, reason: '彩排手动调分' })
-const distributionForm = reactive({ teamId: 1, roundId: 1, method: 'equal', reason: '彩排团队均分' })
+const collectForm = reactive<{ mode: string; targetId: number | null; roundId: number | null }>({ mode: 'player', targetId: null, roundId: null })
+const simulateForm = reactive<{ eventType: string; value: number; targetId: number | null }>({ eventType: 'like_delta', value: 10, targetId: null })
+const manualForm = reactive<{ targetType: string; targetId: number | null; roundId: number | null; rawValue: number; reason: string }>({ targetType: 'player', targetId: null, roundId: null, rawValue: 100, reason: '彩排手动调分' })
+const distributionForm = reactive<{ teamId: number | null; roundId: number | null; method: string; reason: string }>({ teamId: null, roundId: null, method: 'equal', reason: '彩排团队均分' })
 const playerForm = reactive({ name: '', number: 1 })
 const teamForm = reactive({ name: '' })
 const roundForm = reactive({ name: '', startTime: '', endTime: '', status: 'upcoming' })
-const playerRoundForm = reactive({ playerId: 1, teamId: 1, isSpy: false, playerStatus: 'normal' })
+const playerRoundForm = reactive<{ playerId: number | null; teamId: number | null; isSpy: boolean; playerStatus: string }>({ playerId: null, teamId: null, isSpy: false, playerStatus: 'normal' })
 const photoFilter = reactive<{ playerId: number | null; status: string | null }>({ playerId: null, status: 'active' })
 const photoUploadForm = reactive<{ playerId: number; isCover: boolean; sortOrder: number; file: File | null }>({ playerId: 1, isCover: true, sortOrder: 0, file: null })
 
@@ -447,9 +467,36 @@ async function refreshBasicData() {
   if (!playerForm.name.trim()) {
     playerForm.number = getNextPlayerNumber()
   }
+  applyDefaultRound()
+}
+
+/** 数据加载后给轮次类下拉一个合理默认值：优先 active 轮次，否则第一个轮次。 */
+function applyDefaultRound() {
+  if (rounds.value.length === 0) return
+  const active = rounds.value.find((r) => r.status === 'active')
+  const fallbackId = (active || rounds.value[0]).roundId
+  if (boardRoundId.value == null) boardRoundId.value = fallbackId
+  if (playerRoundFilterRoundId.value == null) playerRoundFilterRoundId.value = fallbackId
+  if (collectForm.roundId == null) collectForm.roundId = fallbackId
+  if (manualForm.roundId == null) manualForm.roundId = fallbackId
+  if (distributionForm.roundId == null) distributionForm.roundId = fallbackId
+}
+
+/** 切换集赞模式时清空旧目标，避免选手 ID 被错当成团队 ID 提交（Claude 裁定要求）。 */
+function onCollectModeChange() {
+  collectForm.targetId = null
+}
+
+/** 切换手动调分目标类型时清空旧目标，防止目标值串用（Claude 裁定要求）。 */
+function onManualTypeChange() {
+  manualForm.targetId = null
 }
 
 async function refreshPlayerRounds() {
+  if (playerRoundFilterRoundId.value == null) {
+    ElMessage.warning('请先选择轮次')
+    return
+  }
   playerRounds.value = await listPlayerRounds(playerRoundFilterRoundId.value)
 }
 
@@ -502,22 +549,50 @@ async function copyPhotoUrl(row: any) {
 }
 
 async function submitCollectState() {
+  if (collectForm.roundId == null) {
+    ElMessage.warning('请选择轮次')
+    return
+  }
+  if (collectForm.mode !== 'pool' && collectForm.targetId == null) {
+    ElMessage.warning('请选择目标')
+    return
+  }
   await ElMessageBox.confirm('确认切换当前集赞目标？该操作会影响点赞/留言归属。', '二次确认', { type: 'warning' })
   const payload = { ...collectForm, targetId: collectForm.mode === 'pool' ? null : collectForm.targetId }
   await runAction('集赞目标已切换', () => setCollectState(withOperator(payload)), refreshMonitor)
 }
 
 async function submitSimulate() {
+  if (simulateForm.eventType === 'gift' && simulateForm.targetId == null) {
+    ElMessage.warning('gift 事件请先选择目标选手')
+    return
+  }
   await runAction('模拟注入成功', () => simulateInject(withOperator(simulateForm)), refreshMonitor)
 }
 
 async function submitManualAdjust() {
+  if (manualForm.roundId == null) {
+    ElMessage.warning('请选择轮次')
+    return
+  }
+  if (manualForm.targetType !== 'pool' && manualForm.targetId == null) {
+    ElMessage.warning('请选择目标')
+    return
+  }
   await ElMessageBox.confirm('确认执行手动调分？该操作会写入人气流水与审计日志。', '二次确认', { type: 'warning' })
   const payload = { ...manualForm, targetId: manualForm.targetType === 'pool' ? null : manualForm.targetId }
   await runAction('手动调分成功', () => manualAdjust(withOperator(payload)), refreshMonitor)
 }
 
 async function submitDistribution() {
+  if (distributionForm.teamId == null) {
+    ElMessage.warning('请选择团队')
+    return
+  }
+  if (distributionForm.roundId == null) {
+    ElMessage.warning('请选择轮次')
+    return
+  }
   await ElMessageBox.confirm('确认将团队池当前余额均分给团队成员？', '二次确认', { type: 'warning' })
   await runAction('团队人气均分成功', () => distributeTeam(withOperator(distributionForm)), refreshMonitor)
 }
@@ -546,6 +621,18 @@ async function activateRound(row: any) {
 }
 
 async function submitPlayerRound() {
+  if (playerRoundFilterRoundId.value == null) {
+    ElMessage.warning('请先在上方选择轮次')
+    return
+  }
+  if (playerRoundForm.playerId == null) {
+    ElMessage.warning('请选择选手')
+    return
+  }
+  if (playerRoundForm.teamId == null) {
+    ElMessage.warning('请选择队伍')
+    return
+  }
   const payload = { ...playerRoundForm, roundId: playerRoundFilterRoundId.value }
   await runAction('分队信息已保存', () => savePlayerRound(withOperator(payload)), refreshPlayerRounds)
 }
