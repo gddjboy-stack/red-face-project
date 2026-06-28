@@ -704,7 +704,6 @@ onMounted(async () => {
   await refreshPhotos()
   await refreshMonitor()
 })
-</script>
 
 async function onTokenPlayerChange() {
   tokenFormPhotos.value = await listPhotos({ playerId: tokenForm.playerId, status: 'active' })
@@ -745,3 +744,4 @@ function downloadCsv() {
   if (!lastBatchId.value) return
   window.open(`/api/admin/tokens/export?batchId=${lastBatchId.value}&operatorId=${operatorId.value}`, '_blank')
 }
+</script>
