@@ -87,7 +87,7 @@ public class TokenGeneratorServiceImpl implements TokenGeneratorService {
                     return token;
                 }).collect(Collectors.toList());
         if (tokens.isEmpty()) {
-            return "No tokens found for batchId: " + batchId;
+            return "";
         }
 
         StringBuilder sb = new StringBuilder();

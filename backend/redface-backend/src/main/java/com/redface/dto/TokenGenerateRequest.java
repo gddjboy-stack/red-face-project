@@ -7,6 +7,7 @@ public class TokenGenerateRequest {
     private Long points;
     private Integer count;
     private String productSku;
+    private String idempotencyKey;
 
     public String getOperatorId() { return operatorId; }
     public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
@@ -20,4 +21,6 @@ public class TokenGenerateRequest {
     public void setCount(Integer count) { this.count = count; }
     public String getProductSku() { return productSku; }
     public void setProductSku(String productSku) { this.productSku = productSku; }
+    public String getIdempotencyKey() { return idempotencyKey; }
+    public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
 }

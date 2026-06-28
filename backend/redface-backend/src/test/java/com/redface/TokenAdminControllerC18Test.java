@@ -41,7 +41,7 @@ class TokenAdminControllerC18Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/admin/tokens/generate")
                         .header("X-Admin-Token", ADMIN_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":5,\"photoAssetId\":\"photo_B\"}"))
+                        .content("{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":5,\"photoAssetId\":\"photo_B\",\"idempotencyKey\":\"key1\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(41802));
     }
@@ -51,7 +51,7 @@ class TokenAdminControllerC18Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/admin/tokens/generate")
                         .header("X-Admin-Token", ADMIN_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":5,\"photoAssetId\":\"photo_A_inactive\"}"))
+                        .content("{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":5,\"photoAssetId\":\"photo_A_inactive\",\"idempotencyKey\":\"key2\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(41803));
     }
@@ -61,7 +61,7 @@ class TokenAdminControllerC18Test extends C9MockMvcSupport {
         String body = mockMvc.perform(post("/api/admin/tokens/generate")
                         .header("X-Admin-Token", ADMIN_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":3,\"photoAssetId\":\"photo_A\"}"))
+                        .content("{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":3,\"photoAssetId\":\"photo_A\",\"idempotencyKey\":\"key3\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.generatedCount").value(3))
@@ -83,5 +83,32 @@ class TokenAdminControllerC18Test extends C9MockMvcSupport {
         String[] lines = csv.trim().split("\n");
         assertThat(lines).hasSize(3);
         assertThat(lines[0]).startsWith("RFZJ-");
+    }
+
+    @Test
+    void shouldReturnSameBatchIdOnIdempotentRetry() throws Exception {
+        String req = "{\"operatorId\":\"john\",\"playerId\":1,\"points\":100,\"count\":2,\"photoAssetId\":\"photo_A\",\"idempotencyKey\":\"idem_test_1\"}";
+        
+        String body1 = mockMvc.perform(post("/api/admin/tokens/generate")
+                        .header("X-Admin-Token", ADMIN_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(req))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        
+        String batchId1 = objectMapper.readTree(body1).path("data").path("batchId").asText();
+        
+        String body2 = mockMvc.perform(post("/api/admin/tokens/generate")
+                        .header("X-Admin-Token", ADMIN_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(req))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+                
+        String batchId2 = objectMapper.readTree(body2).path("data").path("batchId").asText();
+        
+        assertThat(batchId1).isEqualTo(batchId2);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM tokens WHERE aqiso_batch_id = ?", Integer.class, batchId1))
+                .isEqualTo(2); // Still only 2 tokens generated
     }
 }

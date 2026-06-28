@@ -1,5 +1,5 @@
 import { jsonPost } from './http'
 
-export function generateTokens(data: { operatorId: string; playerId: number; photoAssetId: string; points: number; count: number; productSku: string }) {
+export function generateTokens(data: { operatorId: string; playerId: number; photoAssetId: string; points: number; count: number; productSku: string; idempotencyKey: string }) {
   return jsonPost<any>('/api/admin/tokens/generate', data)
 }

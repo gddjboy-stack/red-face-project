@@ -130,7 +130,7 @@ public class TokenGeneratorServiceTest {
         String exportedContent = tokenGeneratorService.exportBatch(batchId);
 
         assertNotNull(exportedContent);
-        assertTrue(exportedContent.contains("No tokens found for batchId: " + batchId));
+        assertTrue(exportedContent.isEmpty());
     }
 
     private Token createToken(String tokenId, String batchId) {

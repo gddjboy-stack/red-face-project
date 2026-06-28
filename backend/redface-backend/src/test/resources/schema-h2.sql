@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS photo_assets;
 DROP TABLE IF EXISTS coefficient_ledger;
 DROP TABLE IF EXISTS popularity_ledger;
 DROP TABLE IF EXISTS team_distribution_batches;
+DROP TABLE IF EXISTS idempotency_ledger;
 DROP TABLE IF EXISTS operations_log;
 DROP TABLE IF EXISTS collect_state;
 DROP TABLE IF EXISTS pool_round_stats;
@@ -283,3 +284,11 @@ ALTER TABLE user_session ADD CONSTRAINT fk_user_session_user_id FOREIGN KEY (use
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_round_id FOREIGN KEY (round_id) REFERENCES rounds (round_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_team_id FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_suspect_player_id FOREIGN KEY (suspect_player_id) REFERENCES players (player_id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE idempotency_ledger (
+  idempotency_key VARCHAR(128) NOT NULL,
+  action_type     VARCHAR(50) NOT NULL,
+  result_data     VARCHAR(255) NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (idempotency_key)
+);

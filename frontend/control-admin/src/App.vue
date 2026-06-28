@@ -298,7 +298,7 @@
               <el-form-item label="生成数量"><el-input-number v-model="tokenForm.count" :min="1" :max="10000" /></el-form-item>
               <el-form-item label="SKU(选填)"><el-input v-model="tokenForm.productSku" /></el-form-item>
               <div class="form-actions">
-                <el-button native-type="button" type="danger" @click="submitTokenGenerate">确认生成</el-button>
+                <el-button native-type="button" type="danger" @click="submitTokenGenerate" :loading="generating">确认生成</el-button>
               </div>
             </el-form>
           </el-card>
@@ -452,6 +452,7 @@ const playerRoundForm = reactive<{ playerId: number | null; teamId: number | nul
 const photoFilter = reactive<{ playerId: number | null; status: string | null }>({ playerId: null, status: 'active' })
 const photoUploadForm = reactive<{ playerId: number; isCover: boolean; sortOrder: number; file: File | null }>({ playerId: 1, isCover: true, sortOrder: 0, file: null })
 const uploading = ref(false)
+const generating = ref(false)
 const tokenForm = reactive({ playerId: 1, photoAssetId: '', points: 100, count: 10, productSku: '' })
 const tokenFormPhotos = ref<any[]>([])
 const lastBatchId = ref('')
@@ -720,17 +721,24 @@ async function submitTokenGenerate() {
     return
   }
   await ElMessageBox.confirm(`确认生成 ${tokenForm.count} 张卡密？（每张 ${tokenForm.points} 人气）`, '生成确认', { type: 'warning' })
-  await runAction('卡密生成成功', async () => {
-    const res = await generateTokens(withOperator({
-      playerId: tokenForm.playerId,
-      photoAssetId: tokenForm.photoAssetId,
-      points: tokenForm.points,
-      count: tokenForm.count,
-      productSku: tokenForm.productSku
-    }))
-    lastBatchId.value = res.batchId
-    return res
-  }, async () => {})
+  generating.value = true
+  const idempotencyKey = `gen_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+  try {
+    await runAction('卡密生成成功', async () => {
+      const res = await generateTokens(withOperator({
+        playerId: tokenForm.playerId,
+        photoAssetId: tokenForm.photoAssetId,
+        points: tokenForm.points,
+        count: tokenForm.count,
+        productSku: tokenForm.productSku,
+        idempotencyKey
+      }))
+      lastBatchId.value = res.batchId
+      return res
+    }, async () => {})
+  } finally {
+    generating.value = false
+  }
 }
 
 function downloadCsv() {

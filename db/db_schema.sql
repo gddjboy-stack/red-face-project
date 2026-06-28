@@ -263,3 +263,12 @@ ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_round_id FOREIGN K
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_team_id FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE suspicion_votes ADD CONSTRAINT fk_suspicion_votes_suspect_player_id FOREIGN KEY (suspect_player_id) REFERENCES players (player_id) ON DELETE CASCADE ON UPDATE CASCADE;
 
+
+-- 幂等控制表(防发码连点等)
+CREATE TABLE idempotency_ledger (
+  idempotency_key VARCHAR(128) NOT NULL,
+  action_type     VARCHAR(50) NOT NULL,
+  result_data     VARCHAR(255) NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (idempotency_key)
+) ENGINE=InnoDB COMMENT='幂等控制表';
