@@ -30,13 +30,29 @@ async function loginByCode(code) {
   return data
 }
 
-async function ensureLogin() {
+let loginPromise = null
+
+async function ensureLogin(forceRefresh = false) {
+  if (forceRefresh) {
+    clearLogin()
+  }
   const token = tt.getStorageSync(TOKEN_KEY)
   if (token) {
     return { token, userId: tt.getStorageSync(USER_ID_KEY) }
   }
-  const code = await ttLogin()
-  return loginByCode(code)
+  if (loginPromise) {
+    return loginPromise
+  }
+  loginPromise = (async () => {
+    try {
+      const code = await ttLogin()
+      const res = await loginByCode(code)
+      return res
+    } finally {
+      loginPromise = null
+    }
+  })()
+  return loginPromise
 }
 
 function clearLogin() {

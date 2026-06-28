@@ -278,6 +278,42 @@
         </div>
       </el-tab-pane>
 
+      <el-tab-pane label="发码与导出" name="tokens">
+        <div class="grid-two">
+          <el-card class="panel-card">
+            <div class="panel-title">生成卡密批次</div>
+            <p class="tip warning-text">发码等于印钞，请核对选手和写真！</p>
+            <el-form @submit.prevent label-width="90px">
+              <el-form-item label="选手">
+                <el-select v-model="tokenForm.playerId" filterable @change="onTokenPlayerChange">
+                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.number}号 ${player.name}`" :value="player.playerId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="绑定写真">
+                <el-select v-model="tokenForm.photoAssetId" filterable>
+                  <el-option v-for="photo in tokenFormPhotos" :key="photo.assetId" :label="photo.assetId" :value="photo.assetId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="单张人气"><el-input-number v-model="tokenForm.points" :min="1" /></el-form-item>
+              <el-form-item label="生成数量"><el-input-number v-model="tokenForm.count" :min="1" :max="10000" /></el-form-item>
+              <el-form-item label="SKU(选填)"><el-input v-model="tokenForm.productSku" /></el-form-item>
+              <div class="form-actions">
+                <el-button native-type="button" type="danger" @click="submitTokenGenerate">确认生成</el-button>
+              </div>
+            </el-form>
+          </el-card>
+
+          <el-card class="panel-card" v-if="lastBatchId">
+            <div class="panel-title">导出阿奇索卡库</div>
+            <p class="tip">最新生成的批次：{{ lastBatchId }}</p>
+            <p class="tip warning-text">导出文件为纯文本，一码一行无表头。请直接导入阿奇索对应的商品卡库，切勿跨选手混导！</p>
+            <div class="form-actions" style="margin-top: 20px;">
+              <el-button native-type="button" type="success" @click="downloadCsv">下载纯文本卡库</el-button>
+            </div>
+          </el-card>
+        </div>
+      </el-tab-pane>
+
       <el-tab-pane label="写真管理" name="photos">
         <div class="grid-two">
           <el-card class="panel-card">
@@ -295,7 +331,7 @@
               <el-form-item label="设为封面"><el-switch v-model="photoUploadForm.isCover" /></el-form-item>
               <el-form-item label="排序"><el-input-number v-model="photoUploadForm.sortOrder" /></el-form-item>
               <div class="form-actions">
-                <el-button native-type="button" type="primary" @click="submitPhotoUpload">上传写真</el-button>
+                <el-button native-type="button" type="primary" @click="submitPhotoUpload" v-loading="uploading">上传写真</el-button>
               </div>
             </el-form>
           </el-card>
@@ -358,6 +394,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { distributeTeam, getAdminBoard, getAdminHome, getSuspicionStatus, manualAdjust, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
+import { generateTokens } from './api/tokens'
 import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
@@ -414,6 +451,10 @@ const roundForm = reactive({ name: '', startTime: '', endTime: '', status: 'upco
 const playerRoundForm = reactive<{ playerId: number | null; teamId: number | null; isSpy: boolean; playerStatus: string }>({ playerId: null, teamId: null, isSpy: false, playerStatus: 'normal' })
 const photoFilter = reactive<{ playerId: number | null; status: string | null }>({ playerId: null, status: 'active' })
 const photoUploadForm = reactive<{ playerId: number; isCover: boolean; sortOrder: number; file: File | null }>({ playerId: 1, isCover: true, sortOrder: 0, file: null })
+const uploading = ref(false)
+const tokenForm = reactive({ playerId: 1, photoAssetId: '', points: 100, count: 10, productSku: '' })
+const tokenFormPhotos = ref<any[]>([])
+const lastBatchId = ref('')
 
 function saveOperator() {
   localStorage.setItem('operatorId', operatorId.value)
@@ -514,15 +555,22 @@ async function submitPhotoUpload() {
     ElMessage.error('请选择jpg/png/webp图片文件')
     return
   }
-  await runAction('写真已上传', () => uploadPhoto(withOperator({
-    playerId: photoUploadForm.playerId,
-    isCover: photoUploadForm.isCover,
-    sortOrder: photoUploadForm.sortOrder,
-    file: photoUploadForm.file as File
-  })), async () => {
-    photoUploadForm.file = null
-    await refreshPhotos()
-  })
+  uploading.value = true
+  try {
+    await runAction('写真已上传', () => uploadPhoto(withOperator({
+      playerId: photoUploadForm.playerId,
+      isCover: photoUploadForm.isCover,
+      sortOrder: photoUploadForm.sortOrder,
+      file: photoUploadForm.file as File
+    })), async () => {
+      photoFilter.playerId = photoUploadForm.playerId
+      photoFilter.status = 'active'
+      photoUploadForm.file = null
+      await refreshPhotos()
+    })
+  } finally {
+    uploading.value = false
+  }
 }
 
 async function replacePhotoFile(row: any, event: Event) {
@@ -656,3 +704,36 @@ onMounted(async () => {
   await refreshMonitor()
 })
 </script>
+
+async function onTokenPlayerChange() {
+  tokenFormPhotos.value = await listPhotos({ playerId: tokenForm.playerId, status: 'active' })
+  if (tokenFormPhotos.value.length > 0) {
+    tokenForm.photoAssetId = tokenFormPhotos.value[0].assetId
+  } else {
+    tokenForm.photoAssetId = ''
+  }
+}
+
+async function submitTokenGenerate() {
+  if (!tokenForm.photoAssetId) {
+    ElMessage.error('请选择绑定的写真')
+    return
+  }
+  await ElMessageBox.confirm(`确认生成 ${tokenForm.count} 张卡密？（每张 ${tokenForm.points} 人气）`, '生成确认', { type: 'warning' })
+  await runAction('卡密生成成功', async () => {
+    const res = await generateTokens(withOperator({
+      playerId: tokenForm.playerId,
+      photoAssetId: tokenForm.photoAssetId,
+      points: tokenForm.points,
+      count: tokenForm.count,
+      productSku: tokenForm.productSku
+    }))
+    lastBatchId.value = res.batchId
+    return res
+  }, async () => {})
+}
+
+function downloadCsv() {
+  if (!lastBatchId.value) return
+  window.open(`/api/admin/tokens/export?batchId=${lastBatchId.value}&operatorId=${operatorId.value}`, '_blank')
+}
