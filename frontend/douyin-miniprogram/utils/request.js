@@ -47,7 +47,8 @@ function request(options, isRetry = false) {
         })
       },
       fail(err) {
-        reject({ code: -1, message: err.errMsg || '网络异常，请稍后重试', data: null })
+        console.error('[request fail]', err.errMsg || err)
+        reject({ code: -1, message: '网络异常，请检查连接后重试', data: null })
       }
     })
   })

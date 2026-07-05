@@ -28,7 +28,7 @@ Page({
       success: res => {
         this.setData({ token: String(res.data || '').trim().toUpperCase(), errorMessage: '', remainingSeconds: 0 })
       },
-      fail: () => tt.showToast({ title: '读取剪贴板失败', icon: 'none' })
+      fail: () => tt.showToast({ title: '无法读取剪贴板，请长按输入框手动粘贴', icon: 'none' })
     })
   },
   async submitRedeem() {

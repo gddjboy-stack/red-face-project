@@ -12,7 +12,7 @@
       <text class="section-title">{{roundName || '当前环节'}}</text>
       <text class="state-tag {{open ? 'active' : ''}}">{{open ? '进行中' : '暂未开启'}}</text>
     </view>
-    <view class="intro-text">根据直播线索，选择你认为最可疑的选手。每轮仅可提交一次判断，提交后请等待直播间揭晓。</view>
+    <view class="intro-text">每位选手仅可投一次，可分多次提交不同选手，提交后请等待直播间揭晓。</view>
     <view class="intro-note">当前判断分布按选手序号排列，不设名次。</view>
   </view>
 
