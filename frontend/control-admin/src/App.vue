@@ -71,14 +71,15 @@
           </el-card>
 
           <el-card class="panel-card">
-            <div class="panel-title">真相识破监控</div>
+            <div class="panel-title">卧底识破监控</div>
             <el-descriptions :column="1" border>
               <el-descriptions-item label="状态">{{ suspicionStatus.open ? '进行中' : '暂未开启' }}</el-descriptions-item>
               <el-descriptions-item label="轮次">{{ suspicionStatus.roundName || suspicionStatus.roundId || '-' }}</el-descriptions-item>
             </el-descriptions>
             <p class="tip">只展示判断分布，按选手序号排列，不展示真实卧底身份。</p>
             <el-table :data="suspicionStatus.candidates || []" size="small" height="260">
-              <el-table-column prop="number" label="序号" width="80" />
+              <el-table-column prop="number" label="序号(自增)" width="100" />
+              <el-table-column prop="displayCode" label="编号" width="100" />
               <el-table-column prop="playerName" label="选手" />
               <el-table-column prop="teamName" label="队伍" />
               <el-table-column prop="count" label="判断次数" />
@@ -90,7 +91,12 @@
       <el-tab-pane label="场控操作" name="control">
         <div class="grid-two">
           <el-card class="panel-card">
-            <div class="panel-title">集赞目标切换</div>
+            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>集赞目标切换</span>
+              <el-button :type="suspicionStatus.open ? 'danger' : 'success'" size="small" @click="toggleSpyMode">
+                {{ suspicionStatus.open ? '关闭卧底识破' : '开启卧底识破' }}
+              </el-button>
+            </div>
             <el-form @submit.prevent label-width="100px">
               <el-form-item label="模式">
                 <el-select v-model="collectForm.mode" @change="onCollectModeChange">
@@ -189,6 +195,23 @@
               </div>
             </el-form>
           </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">手动加成</div>
+            <el-form @submit.prevent label-width="80px">
+              <el-form-item label="目标类型">
+                <el-select v-model="bonusForm.targetType">
+                  <el-option label="选手 player" value="player" />
+                  <el-option label="团队 team" value="team" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="目标 ID"><el-input-number v-model="bonusForm.targetId" :min="1" /></el-form-item>
+              <el-form-item label="轮次 ID"><el-input-number v-model="bonusForm.roundId" :min="1" /></el-form-item>
+              <el-form-item label="加成变动"><el-input-number v-model="bonusForm.delta" :min="-100" :max="100" placeholder="±10代表±0.1" /></el-form-item>
+              <el-form-item label="原因"><el-input v-model="bonusForm.reason" /></el-form-item>
+              <div class="form-actions"><el-button native-type="button" type="warning" @click="submitManualBonus">确认加成</el-button></div>
+            </el-form>
+          </el-card>
         </div>
       </el-tab-pane>
 
@@ -198,11 +221,12 @@
             <div class="panel-title">选手管理</div>
             <el-form @submit.prevent inline>
               <el-form-item label="姓名"><el-input v-model="playerForm.name" /></el-form-item>
-              <el-form-item label="序号"><el-input-number v-model="playerForm.number" :min="1" /></el-form-item>
+              <el-form-item label="编号"><el-input v-model="playerForm.displayCode" placeholder="4位数字" /></el-form-item>
               <el-form-item><el-button native-type="button" type="primary" @click="submitPlayer">新增选手</el-button></el-form-item>
             </el-form>
             <el-table :data="players" size="small" height="260">
-              <el-table-column prop="number" label="序号" width="80" />
+              <el-table-column prop="number" label="序号(自增)" width="100" />
+              <el-table-column prop="displayCode" label="编号" width="100" />
               <el-table-column prop="name" label="姓名" />
               <el-table-column prop="status" label="状态" />
               <el-table-column prop="playerId" label="ID" width="80" />
@@ -286,7 +310,7 @@
             <el-form @submit.prevent label-width="90px">
               <el-form-item label="选手">
                 <el-select v-model="tokenForm.playerId" filterable @change="onTokenPlayerChange">
-                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.number}号 ${player.name}`" :value="player.playerId" />
+                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.displayCode} ${player.name}`" :value="player.playerId" />
                 </el-select>
               </el-form-item>
               <el-form-item label="绑定写真">
@@ -314,6 +338,22 @@
         </div>
       </el-tab-pane>
 
+      <el-tab-pane label="退款管理" name="refunds">
+        <div class="grid-two">
+          <el-card class="panel-card">
+            <div class="panel-title">卡密退款</div>
+            <p class="tip warning-text">第一季退款规则：只回退人气值，不回收会员天数和写真收藏。</p>
+            <el-form @submit.prevent label-width="90px">
+              <el-form-item label="卡密"><el-input v-model="refundForm.tokenId" placeholder="RFZJ-XXXX-XXXX-XXXX" /></el-form-item>
+              <el-form-item label="退款原因"><el-input v-model="refundForm.reason" /></el-form-item>
+              <div class="form-actions">
+                <el-button native-type="button" type="danger" @click="submitRefund">确认退款</el-button>
+              </div>
+            </el-form>
+          </el-card>
+        </div>
+      </el-tab-pane>
+
       <el-tab-pane label="写真管理" name="photos">
         <div class="grid-two">
           <el-card class="panel-card">
@@ -322,7 +362,7 @@
             <el-form @submit.prevent label-width="90px">
               <el-form-item label="选手">
                 <el-select v-model="photoUploadForm.playerId" filterable style="width: 260px">
-                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.number}号 ${player.name}`" :value="player.playerId" />
+                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.displayCode} ${player.name}`" :value="player.playerId" />
                 </el-select>
               </el-form-item>
               <el-form-item label="图片文件">
@@ -341,7 +381,7 @@
             <el-form @submit.prevent label-width="90px">
               <el-form-item label="选手">
                 <el-select v-model="photoFilter.playerId" clearable filterable style="width: 260px">
-                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.number}号 ${player.name}`" :value="player.playerId" />
+                  <el-option v-for="player in players" :key="player.playerId" :label="`${player.displayCode} ${player.name}`" :value="player.playerId" />
                 </el-select>
               </el-form-item>
               <el-form-item label="状态">
@@ -394,7 +434,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { distributeTeam, getAdminBoard, getAdminHome, getSuspicionStatus, manualAdjust, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
-import { generateTokens } from './api/tokens'
+import { generateTokens, exportTokens } from './api/tokens'
 import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
@@ -444,8 +484,9 @@ const playerRoundFilterRoundId = ref<number | null>(null)
 const collectForm = reactive<{ mode: string; targetId: number | null; roundId: number | null }>({ mode: 'player', targetId: null, roundId: null })
 const simulateForm = reactive<{ eventType: string; value: number; targetId: number | null }>({ eventType: 'like_delta', value: 10, targetId: null })
 const manualForm = reactive<{ targetType: string; targetId: number | null; roundId: number | null; rawValue: number; reason: string }>({ targetType: 'player', targetId: null, roundId: null, rawValue: 100, reason: '彩排手动调分' })
+const bonusForm = reactive({ targetType: 'player', targetId: 1, roundId: 1, delta: 10, reason: '' })
 const distributionForm = reactive<{ teamId: number | null; roundId: number | null; method: string; reason: string }>({ teamId: null, roundId: null, method: 'equal', reason: '彩排团队均分' })
-const playerForm = reactive({ name: '', number: 1 })
+const playerForm = reactive<{ name: string; displayCode: string }>({ name: '', displayCode: '' })
 const teamForm = reactive({ name: '' })
 const roundForm = reactive({ name: '', startTime: '', endTime: '', status: 'upcoming' })
 const playerRoundForm = reactive<{ playerId: number | null; teamId: number | null; isSpy: boolean; playerStatus: string }>({ playerId: null, teamId: null, isSpy: false, playerStatus: 'normal' })
@@ -455,6 +496,7 @@ const uploading = ref(false)
 const generating = ref(false)
 const tokenForm = reactive({ playerId: 1, photoAssetId: '', points: 100, count: 10, productSku: '' })
 const tokenFormPhotos = ref<any[]>([])
+const refundForm = reactive({ tokenId: '', reason: '' })
 const lastBatchId = ref('')
 
 function saveOperator() {
@@ -485,17 +527,9 @@ async function refreshBoard() {
   board.value = await getAdminBoard(boardTab.value, boardRoundId.value)
 }
 
-function getNextPlayerNumber() {
-  const maxNumber = players.value.reduce((max, player) => {
-    const number = Number(player.number) || 0
-    return number > max ? number : max
-  }, 0)
-  return maxNumber + 1
-}
-
 function resetPlayerForm() {
   playerForm.name = ''
-  playerForm.number = getNextPlayerNumber()
+  playerForm.displayCode = ''
 }
 
 function resetTeamForm() {
@@ -506,9 +540,7 @@ async function refreshBasicData() {
   players.value = await listPlayers()
   teams.value = await listTeams()
   rounds.value = await listRounds()
-  if (!playerForm.name.trim()) {
-    playerForm.number = getNextPlayerNumber()
-  }
+
   applyDefaultRound()
 }
 
@@ -664,6 +696,49 @@ async function submitRound() {
   await runAction('轮次已新增', () => createRound(withOperator(roundForm)), refreshBasicData)
 }
 
+async function toggleSpyMode() {
+  const willOpen = !suspicionStatus.value.open
+  const mode = willOpen ? 'spy' : 'pool'
+  await ElMessageBox.confirm(`确认要${willOpen ? '开启' : '关闭'}卧底识破投票吗？${willOpen ? '开启后观众端投票入口将立即可用。' : '关闭后将切回 pool 模式。'}`, '提示', { type: 'warning' })
+  await runAction('操作成功', () => setCollectState(withOperator({
+    mode,
+    targetId: willOpen ? 1 : null,
+    roundId: home.value.roundId || 1
+  })), refreshMonitor)
+}
+
+async function submitManualBonus() {
+  await ElMessageBox.confirm(`确认给 ${bonusForm.targetType} ${bonusForm.targetId} 增加系数 ${bonusForm.delta}？`, '加成确认', { type: 'warning' })
+  const idempotencyKey = `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+  await runAction('加成成功', () => manualAdjust(withOperator({
+    ...bonusForm,
+    idempotencyKey
+  })), refreshMonitor)
+}
+
+async function submitRefund() {
+  if (!refundForm.tokenId) {
+    ElMessage.error('请输入卡密')
+    return
+  }
+  await ElMessageBox.confirm(`确认对卡密 ${refundForm.tokenId} 进行退款？（不可逆）`, '退款确认', { type: 'warning' })
+  await runAction('退款成功', async () => {
+    // 假设有 jsonPost，由于目前没引入 refund api，这里用 fetch 临时替代
+    const token = localStorage.getItem('adminToken')
+    const res = await fetch('/api/admin/refund', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': token || '' },
+      body: JSON.stringify(withOperator({ tokenId: refundForm.tokenId, reason: refundForm.reason }))
+    })
+    const data = await res.json()
+    if (data.code !== 0) throw new Error(data.message)
+    return data
+  }, async () => {
+    refundForm.tokenId = ''
+    refundForm.reason = ''
+  })
+}
+
 async function activateRound(row: any) {
   await ElMessageBox.confirm(`这会把当前进行中的轮次标记为已结束，并将【${row.name}】设为 active。确认继续？`, '切换 active 轮次', { type: 'warning' })
   await runAction('轮次已切换为 active', () => updateRoundStatus(row.roundId, withOperator({ status: 'active' })), refreshBasicData)
@@ -716,10 +791,10 @@ async function onTokenPlayerChange() {
 
 async function submitTokenGenerate() {
   if (!tokenForm.photoAssetId) {
-    ElMessage.error('请选择绑定的写真')
-    return
+    await ElMessageBox.confirm(`当前未绑定写真，生成的卡密仅含人气值，是否继续？`, '警告', { type: 'warning' })
+  } else {
+    await ElMessageBox.confirm(`确认生成 ${tokenForm.count} 张卡密？（每张 ${tokenForm.points} 人气）`, '生成确认', { type: 'warning' })
   }
-  await ElMessageBox.confirm(`确认生成 ${tokenForm.count} 张卡密？（每张 ${tokenForm.points} 人气）`, '生成确认', { type: 'warning' })
   generating.value = true
   const idempotencyKey = `gen_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
   try {
@@ -740,8 +815,55 @@ async function submitTokenGenerate() {
   }
 }
 
-function downloadCsv() {
+async function downloadCsv() {
   if (!lastBatchId.value) return
-  window.open(`/api/admin/tokens/export?batchId=${lastBatchId.value}&operatorId=${operatorId.value}`, '_blank')
+  try {
+    await exportTokens(lastBatchId.value, operatorId.value)
+  } catch (e: any) {
+    ElMessage.error(e.message || '下载失败')
+  }
 }
 </script>
+
+async function submitRefund() {
+  if (!refundForm.tokenId) {
+    ElMessage.error('请输入卡密')
+    return
+  }
+  await ElMessageBox.confirm(`确认对卡密 ${refundForm.tokenId} 进行退款？（不可逆）`, '退款确认', { type: 'warning' })
+  await runAction('退款成功', async () => {
+    return jsonPost('/api/admin/refund', withOperator({
+      tokenId: refundForm.tokenId,
+      reason: refundForm.reason
+    }))
+  }, async () => {
+    refundForm.tokenId = ''
+    refundForm.reason = ''
+  })
+}
+
+function logoutAdmin() {
+  localStorage.removeItem('operatorId')
+  localStorage.removeItem('adminToken')
+  window.location.reload()
+}
+
+async function toggleSpyMode() {
+  const willOpen = !suspicionStatus.value.open
+  const mode = willOpen ? 'spy' : 'pool'
+  await ElMessageBox.confirm(`确认要${willOpen ? '开启' : '关闭'}卧底识破投票吗？${willOpen ? '开启后观众端投票入口将立即可用。' : '关闭后将切回 pool 模式。'}`, '提示', { type: 'warning' })
+  await runAction('操作成功', () => jsonPost('/api/admin/collect-state', withOperator({
+    mode,
+    targetId: willOpen ? 1 : null,
+    roundId: monitorData.value.roundId || 1
+  })), refreshMonitor)
+}
+
+async function submitManualBonus() {
+  await ElMessageBox.confirm(`确认给 ${bonusForm.targetType} ${bonusForm.targetId} 增加系数 ${bonusForm.delta}？`, '加成确认', { type: 'warning' })
+  const idempotencyKey = `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+  await runAction('加成成功', () => jsonPost('/api/admin/adjust-coefficient', withOperator({
+    ...bonusForm,
+    idempotencyKey
+  })))
+}

@@ -11,6 +11,8 @@ import com.redface.query.RoundSummary;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.ArrayList;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -61,9 +63,9 @@ public class SuspicionService {
         fillRatios(candidates, suspicionMapper.countByRound(roundId));
         response.setCandidates(candidates);
 
-        Integer submittedPlayerId = suspicionMapper.findSubmittedPlayerId(userId, roundId);
-        response.setSubmitted(submittedPlayerId != null);
-        response.setSubmittedPlayerId(submittedPlayerId);
+        List<Integer> submittedPlayerIds = suspicionMapper.findSubmittedPlayerIds(userId, roundId);
+        response.setSubmitted(submittedPlayerIds != null && !submittedPlayerIds.isEmpty());
+        response.setSubmittedPlayerIds(submittedPlayerIds);
         return response;
     }
 
@@ -85,7 +87,7 @@ public class SuspicionService {
         fillRatios(candidates, suspicionMapper.countByRound(roundId));
         response.setCandidates(candidates);
         response.setSubmitted(false);
-        response.setSubmittedPlayerId(null);
+        response.setSubmittedPlayerIds(new ArrayList<>());
         return response;
     }
 
@@ -93,7 +95,7 @@ public class SuspicionService {
     public SuspicionSubmitResponse submit(String userId, SuspicionSubmitRequest request) {
         validateUser(userId);
         if (request == null || request.getRoundId() == null || request.getRoundId() <= 0
-                || request.getSuspectPlayerId() == null || request.getSuspectPlayerId() <= 0) {
+                || request.getSuspectPlayerIds() == null || request.getSuspectPlayerIds().isEmpty()) {
             throw new SuspicionException(CODE_INVALID_CANDIDATE, "该选手暂不可选择，请刷新后重试。");
         }
 
@@ -104,24 +106,40 @@ public class SuspicionService {
         if (!activeRound.getRoundId().equals(request.getRoundId())) {
             throw new SuspicionException(CODE_ROUND_MISMATCH, "环节状态已更新，请刷新页面。");
         }
-        if (!suspicionMapper.existsCandidate(request.getRoundId(), request.getSuspectPlayerId())) {
-            throw new SuspicionException(CODE_INVALID_CANDIDATE, "该选手暂不可选择，请刷新后重试。");
-        }
-        Integer existing = suspicionMapper.findSubmittedPlayerId(userId, request.getRoundId());
-        if (existing != null) {
-            throw new SuspicionException(CODE_ALREADY_SUBMITTED, SUBMITTED_MESSAGE);
+
+        List<Integer> accepted = new ArrayList<>();
+        List<Integer> duplicated = new ArrayList<>();
+        List<Integer> existing = suspicionMapper.findSubmittedPlayerIds(userId, request.getRoundId());
+
+        for (Integer suspectId : request.getSuspectPlayerIds()) {
+            if (suspectId == null || suspectId <= 0) continue;
+            if (!suspicionMapper.existsCandidate(request.getRoundId(), suspectId)) {
+                throw new SuspicionException(CODE_INVALID_CANDIDATE, "该选手暂不可选择，请刷新后重试。");
+            }
+            if (existing != null && existing.contains(suspectId)) {
+                duplicated.add(suspectId);
+                continue;
+            }
+            try {
+                int inserted = suspicionMapper.insertSubmission(userId, request.getRoundId(), suspectId);
+                if (inserted == 1) {
+                    accepted.add(suspectId);
+                }
+            } catch (DuplicateKeyException e) {
+                duplicated.add(suspectId);
+            }
         }
 
-        int inserted = suspicionMapper.insertSubmission(userId, request.getRoundId(), request.getSuspectPlayerId());
-        if (inserted != 1) {
-            throw new SuspicionException(CODE_INVALID_CANDIDATE, "该选手暂不可选择，请刷新后重试。");
+        if (accepted.isEmpty() && !duplicated.isEmpty()) {
+            throw new SuspicionException(CODE_ALREADY_SUBMITTED, "所选选手均已提交过判断。");
         }
 
         SuspicionSubmitResponse response = new SuspicionSubmitResponse();
         response.setRoundId(request.getRoundId());
         response.setSubmitted(true);
-        response.setSubmittedPlayerId(request.getSuspectPlayerId());
-        response.setMessage(SUBMITTED_MESSAGE);
+        response.setAccepted(accepted);
+        response.setDuplicated(duplicated);
+        response.setMessage("成功提交 " + accepted.size() + " 人" + (duplicated.isEmpty() ? "" : "，" + duplicated.size() + " 人此前已投过") + "。");
         return response;
     }
 

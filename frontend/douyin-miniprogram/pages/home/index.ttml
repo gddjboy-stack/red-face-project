@@ -27,7 +27,7 @@
     <view class="live-tip">* 增加人气值/留言请在直播间进行</view>
 
     <view class="spy-entry {{home.spyChannelOpen ? '' : 'disabled'}}" bindtap="onSpyTap">
-      <text>◎ 真相识破{{home.spyChannelOpen ? '进行中 · 点击参与' : '将在对应环节开启'}}</text>
+      <text>◎ 卧底识破{{home.spyChannelOpen ? '进行中 · 点击参与' : '将在对应环节开启'}}</text>
       <text>···</text>
     </view>
 

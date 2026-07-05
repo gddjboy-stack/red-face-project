@@ -3,11 +3,13 @@ CREATE TABLE players (
   player_id   INT NOT NULL AUTO_INCREMENT,
   name        VARCHAR(100) NOT NULL COMMENT '选手姓名',
   number      INT NOT NULL COMMENT '选手序号(展示用,如"3号")',
+  display_code VARCHAR(20) NULL COMMENT '选手编号(展示与录入)',
   status      VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT 'active/eliminated',
   created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (player_id),
-  UNIQUE KEY uq_number (number)
+  UNIQUE KEY uq_number (number),
+  UNIQUE KEY uq_display_code (display_code)
 ) ENGINE=InnoDB COMMENT='选手固定信息表';
 
 CREATE TABLE teams (
@@ -74,6 +76,7 @@ CREATE TABLE team_round_stats (
   team_id                INT NOT NULL,
   round_id               INT NOT NULL,
   team_popularity        BIGINT NOT NULL DEFAULT 0 COMMENT '团队池当前人气值',
+  coefficient            INT NOT NULL DEFAULT 100 COMMENT '加成系数×100, 1.0=100',
   distributed_popularity BIGINT NOT NULL DEFAULT 0 COMMENT '已分配给成员的累计',
   updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (team_id, round_id)
@@ -272,3 +275,21 @@ CREATE TABLE idempotency_ledger (
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (idempotency_key)
 ) ENGINE=InnoDB COMMENT='幂等控制表';
+
+-- 团队加成系数变动流水
+CREATE TABLE team_coefficient_ledger (
+  id              BIGINT NOT NULL AUTO_INCREMENT,
+  team_id         INT NOT NULL,
+  round_id        INT NOT NULL,
+  task_id         VARCHAR(64) NOT NULL COMMENT '任务唯一标识',
+  task_type       VARCHAR(30) NOT NULL COMMENT 'manual_bonus',
+  delta           INT NOT NULL COMMENT '±10代表±0.1',
+  idempotency_key VARCHAR(128) NOT NULL,
+  operator_id     VARCHAR(64) NOT NULL,
+  reason          VARCHAR(500) NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_team_coef_idem (idempotency_key),
+  CONSTRAINT fk_team_coef_ledger_team FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_team_coef_ledger_round FOREIGN KEY (round_id) REFERENCES rounds (round_id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB COMMENT='团队加成系数变动流水';

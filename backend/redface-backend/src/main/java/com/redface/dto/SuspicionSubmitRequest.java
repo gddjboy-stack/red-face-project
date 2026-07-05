@@ -5,10 +5,10 @@ package com.redface.dto;
  */
 public class SuspicionSubmitRequest {
     private Integer roundId;
-    private Integer suspectPlayerId;
+    private java.util.List<Integer> suspectPlayerIds;
 
     public Integer getRoundId() { return roundId; }
     public void setRoundId(Integer roundId) { this.roundId = roundId; }
-    public Integer getSuspectPlayerId() { return suspectPlayerId; }
-    public void setSuspectPlayerId(Integer suspectPlayerId) { this.suspectPlayerId = suspectPlayerId; }
+    public java.util.List<Integer> getSuspectPlayerIds() { return suspectPlayerIds; }
+    public void setSuspectPlayerIds(java.util.List<Integer> suspectPlayerIds) { this.suspectPlayerIds = suspectPlayerIds; }
 }

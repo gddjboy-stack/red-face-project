@@ -31,7 +31,7 @@ public interface C9QueryMapper {
                    p.number AS number,
                    p.name AS name,
                    pr.team_id AS teamId,
-                   t.name AS teamName
+                   t.name AS teamName, pr.is_spy AS isSpy
             FROM players p
             LEFT JOIN player_round pr ON pr.player_id = p.player_id AND pr.round_id = #{roundId}
             LEFT JOIN teams t ON t.team_id = pr.team_id
@@ -45,7 +45,7 @@ public interface C9QueryMapper {
     @Select("""
             SELECT p.number AS number,
                    p.name AS name,
-                   t.name AS teamName,
+                   t.name AS teamName, pr.is_spy AS isSpy,
                    COALESCE(prs.individual_popularity, 0) AS popularityValue
             FROM player_round pr
             JOIN players p ON p.player_id = pr.player_id
@@ -60,7 +60,7 @@ public interface C9QueryMapper {
             SELECT t.team_id AS number,
                    t.name AS name,
                    t.name AS teamName,
-                   COALESCE(trs.team_popularity, 0) AS popularityValue
+                   CAST(COALESCE(trs.team_popularity, 0) * COALESCE(trs.coefficient, 100) / 100 AS SIGNED) AS popularityValue
             FROM teams t
             LEFT JOIN team_round_stats trs ON trs.team_id = t.team_id AND trs.round_id = #{roundId}
             WHERE EXISTS (
@@ -73,7 +73,7 @@ public interface C9QueryMapper {
     @Select("""
             SELECT p.number AS number,
                    p.name AS name,
-                   t.name AS teamName,
+                   t.name AS teamName, pr.is_spy AS isSpy,
                    COALESCE(prs.spy_popularity, 0) AS popularityValue
             FROM player_round pr
             JOIN players p ON p.player_id = pr.player_id
@@ -87,7 +87,7 @@ public interface C9QueryMapper {
     @Select("""
             SELECT p.number AS playerNumber,
                    p.name AS playerName,
-                   t.name AS teamName,
+                   t.name AS teamName, pr.is_spy AS isSpy,
                    tk.points AS points,
                    tk.photo_asset_id AS photoAssetId,
                    pa.preview_url AS photoPreviewUrl,

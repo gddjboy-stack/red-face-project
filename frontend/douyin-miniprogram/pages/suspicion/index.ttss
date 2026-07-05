@@ -133,3 +133,7 @@
   font-size: 24rpx;
   text-align: right;
 }
+
+.team-title { font-size: 32rpx; font-weight: bold; color: #333; margin: 30rpx 0 10rpx; }
+.candidate-item.disabled { opacity: 0.7; }
+.btn.unselected { background: #f0f0f0; color: #666; }

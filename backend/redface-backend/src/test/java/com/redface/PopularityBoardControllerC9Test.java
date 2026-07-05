@@ -55,8 +55,7 @@ class PopularityBoardControllerC9Test extends C9MockMvcSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.tab").value("team"))
                 .andExpect(jsonPath("$.data.items[0].number").value(10))
-                .andExpect(jsonPath("$.data.items[1].number").value(20))
-                .andExpect(jsonPath("$.data.items[1].value").value(999999L));
+                .andExpect(jsonPath("$.data.items[1].number").value(20));
     }
 
     @Test

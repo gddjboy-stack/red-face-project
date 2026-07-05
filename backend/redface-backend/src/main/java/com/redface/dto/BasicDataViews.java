@@ -13,6 +13,7 @@ public final class BasicDataViews {
         private Integer playerId;
         private String name;
         private Integer number;
+        private String displayCode;
         private String status;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -23,6 +24,8 @@ public final class BasicDataViews {
         public void setName(String name) { this.name = name; }
         public Integer getNumber() { return number; }
         public void setNumber(Integer number) { this.number = number; }
+        public String getDisplayCode() { return displayCode; }
+        public void setDisplayCode(String displayCode) { this.displayCode = displayCode; }
         public String getStatus() { return status; }
         public void setStatus(String status) { this.status = status; }
         public LocalDateTime getCreatedAt() { return createdAt; }
@@ -66,6 +69,7 @@ public final class BasicDataViews {
     public static class PlayerRoundView {
         private Integer playerId;
         private Integer number;
+        private String displayCode;
         private String playerName;
         private Integer roundId;
         private String roundName;
@@ -78,6 +82,8 @@ public final class BasicDataViews {
         public void setPlayerId(Integer playerId) { this.playerId = playerId; }
         public Integer getNumber() { return number; }
         public void setNumber(Integer number) { this.number = number; }
+        public String getDisplayCode() { return displayCode; }
+        public void setDisplayCode(String displayCode) { this.displayCode = displayCode; }
         public String getPlayerName() { return playerName; }
         public void setPlayerName(String playerName) { this.playerName = playerName; }
         public Integer getRoundId() { return roundId; }

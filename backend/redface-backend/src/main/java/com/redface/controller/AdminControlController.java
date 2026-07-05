@@ -3,6 +3,7 @@ package com.redface.controller;
 import com.redface.api.ApiResponse;
 import com.redface.dto.AdminOperationResult;
 import com.redface.dto.AdminRequests;
+import com.redface.service.CoefficientService;
 import com.redface.dto.DistributionResult;
 import com.redface.dto.LiveHomeResponse;
 import com.redface.dto.PopularityBoardResponse;
@@ -24,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin")
 public class AdminControlController {
     private final AdminControlService adminControlService;
+    private final CoefficientService coefficientService;
 
-    public AdminControlController(AdminControlService adminControlService) {
+    public AdminControlController(AdminControlService adminControlService, CoefficientService coefficientService) {
         this.adminControlService = adminControlService;
+        this.coefficientService = coefficientService;
     }
 
     @GetMapping("/live/home")
@@ -53,6 +56,18 @@ public class AdminControlController {
     @PostMapping("/live/simulate")
     public ApiResponse<AdminOperationResult<SimResult>> simulateInject(@RequestBody AdminRequests.SimulateInjectRequest request) {
         return ApiResponse.success(adminControlService.simulateInject(request));
+    }
+
+    @PostMapping("/adjust-coefficient")
+    public ApiResponse<Void> manualBonus(@RequestBody AdminRequests.ManualBonusRequest request) {
+        if ("player".equals(request.getTargetType())) {
+            coefficientService.manualAdjustPlayer(request.getTargetId(), request.getRoundId(), request.getDelta(), request.getIdempotencyKey(), request.getOperatorId(), request.getReason());
+        } else if ("team".equals(request.getTargetType())) {
+            coefficientService.manualAdjustTeam(request.getTargetId(), request.getRoundId(), request.getDelta(), request.getIdempotencyKey(), request.getOperatorId(), request.getReason());
+        } else {
+            return ApiResponse.error(400, "不支持的 targetType", null);
+        }
+        return ApiResponse.success(null);
     }
 
     @PostMapping("/popularity/manual-adjust")

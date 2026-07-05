@@ -36,7 +36,7 @@ class SuspicionControllerC13Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/suspicion/submit")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
-                        .content("{\"roundId\":1,\"suspectPlayerId\":1}"))
+                        .content("{\"roundId\":1,\"suspectPlayerIds\":[1]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(41001))
                 .andExpect(jsonPath("$.data.businessCode").value("not_open"));
@@ -50,7 +50,7 @@ class SuspicionControllerC13Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/suspicion/submit")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
-                        .content("{\"roundId\":1,\"suspectPlayerId\":99}"))
+                        .content("{\"roundId\":1,\"suspectPlayerIds\":[99]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(41002))
                 .andExpect(jsonPath("$.data.businessCode").value("invalid_candidate"));
@@ -64,16 +64,16 @@ class SuspicionControllerC13Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/suspicion/submit")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
-                        .content("{\"roundId\":1,\"suspectPlayerId\":1}"))
+                        .content("{\"roundId\":1,\"suspectPlayerIds\":[1]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.submitted").value(true))
-                .andExpect(jsonPath("$.data.submittedPlayerId").value(1));
+                .andExpect(jsonPath("$.data.accepted[0]").value(1));
 
         mockMvc.perform(post("/api/suspicion/submit")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
-                        .content("{\"roundId\":1,\"suspectPlayerId\":2}"))
+                        .content("{\"roundId\":1,\"suspectPlayerIds\":[1]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(41003))
                 .andExpect(jsonPath("$.data.businessCode").value("already_submitted"));
@@ -97,7 +97,7 @@ class SuspicionControllerC13Test extends C9MockMvcSupport {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.open").value(true))
                 .andExpect(jsonPath("$.data.submitted").value(true))
-                .andExpect(jsonPath("$.data.submittedPlayerId").value(1))
+                .andExpect(jsonPath("$.data.submittedPlayerIds[0]").value(1))
                 .andExpect(jsonPath("$.data.candidates[0].number").value(3))
                 .andExpect(jsonPath("$.data.candidates[0].count").value(1))
                 .andExpect(jsonPath("$.data.candidates[1].number").value(5))
@@ -128,7 +128,7 @@ class SuspicionControllerC13Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/suspicion/submit")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
-                        .content("{\"roundId\":1,\"suspectPlayerId\":2}"))
+                        .content("{\"roundId\":1,\"suspectPlayerIds\":[2]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(41002));
     }
@@ -137,7 +137,7 @@ class SuspicionControllerC13Test extends C9MockMvcSupport {
         mockMvc.perform(post("/api/suspicion/submit")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
-                        .content("{\"roundId\":1,\"suspectPlayerId\":" + suspectPlayerId + "}"))
+                        .content("{\"roundId\":1,\"suspectPlayerIds\":[" + suspectPlayerId + "]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }

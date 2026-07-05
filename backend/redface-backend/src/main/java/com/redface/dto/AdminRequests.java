@@ -84,4 +84,28 @@ public final class AdminRequests {
         public String getReason() { return reason; }
         public void setReason(String reason) { this.reason = reason; }
     }
+
+    public static class ManualBonusRequest {
+        private String operatorId;
+        private Integer roundId;
+        private String targetType; // player/team
+        private Integer targetId;
+        private Integer delta;
+        private String idempotencyKey;
+        private String reason;
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public Integer getRoundId() { return roundId; }
+        public void setRoundId(Integer roundId) { this.roundId = roundId; }
+        public String getTargetType() { return targetType; }
+        public void setTargetType(String targetType) { this.targetType = targetType; }
+        public Integer getTargetId() { return targetId; }
+        public void setTargetId(Integer targetId) { this.targetId = targetId; }
+        public Integer getDelta() { return delta; }
+        public void setDelta(Integer delta) { this.delta = delta; }
+        public String getIdempotencyKey() { return idempotencyKey; }
+        public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
 }

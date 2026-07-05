@@ -1,7 +1,7 @@
 <view class="container suspicion-page">
   <view class="page-title">
     <view>
-      <text>真相识破</text>
+      <text>卧底识破</text>
       <text class="brand-subtitle">根据直播线索提交你的判断</text>
     </view>
     <text class="muted">···</text>

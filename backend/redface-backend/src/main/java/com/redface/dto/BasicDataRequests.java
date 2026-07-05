@@ -13,6 +13,7 @@ public final class BasicDataRequests {
         private Integer playerId;
         private String name;
         private Integer number;
+        private String displayCode;
         private String status;
         private String operatorId;
 
@@ -22,6 +23,8 @@ public final class BasicDataRequests {
         public void setName(String name) { this.name = name; }
         public Integer getNumber() { return number; }
         public void setNumber(Integer number) { this.number = number; }
+        public String getDisplayCode() { return displayCode; }
+        public void setDisplayCode(String displayCode) { this.displayCode = displayCode; }
         public String getStatus() { return status; }
         public void setStatus(String status) { this.status = status; }
         public String getOperatorId() { return operatorId; }

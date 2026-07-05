@@ -11,7 +11,7 @@ public class SuspicionStatusResponse {
     private String roundName;
     private boolean open;
     private boolean submitted;
-    private Integer submittedPlayerId;
+    private java.util.List<Integer> submittedPlayerIds;
     private List<SuspicionCandidateView> candidates = new ArrayList<>();
     private long updatedAt;
 
@@ -23,8 +23,8 @@ public class SuspicionStatusResponse {
     public void setOpen(boolean open) { this.open = open; }
     public boolean isSubmitted() { return submitted; }
     public void setSubmitted(boolean submitted) { this.submitted = submitted; }
-    public Integer getSubmittedPlayerId() { return submittedPlayerId; }
-    public void setSubmittedPlayerId(Integer submittedPlayerId) { this.submittedPlayerId = submittedPlayerId; }
+    public java.util.List<Integer> getSubmittedPlayerIds() { return submittedPlayerIds; }
+    public void setSubmittedPlayerIds(java.util.List<Integer> submittedPlayerIds) { this.submittedPlayerIds = submittedPlayerIds; }
     public List<SuspicionCandidateView> getCandidates() { return candidates; }
     public void setCandidates(List<SuspicionCandidateView> candidates) { this.candidates = candidates; }
     public long getUpdatedAt() { return updatedAt; }

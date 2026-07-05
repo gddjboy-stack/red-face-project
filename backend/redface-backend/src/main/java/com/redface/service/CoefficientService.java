@@ -8,6 +8,8 @@ import com.redface.mapper.StatsMapper;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DuplicateKeyException;
+import com.redface.api.ApiException;
 import org.springframework.util.StringUtils;
 
 /**
@@ -37,6 +39,30 @@ public class CoefficientService {
      * @param operatorId 操作人 ID
      * @return 系数调整结果
      */
+    @Transactional
+    public void manualAdjustPlayer(int playerId, int roundId, int delta, String idempotencyKey, String operatorId, String reason) {
+        if (Math.abs(delta) > 100) throw new ApiException(400, "单次加成调整不能超过 ±1.0");
+        try {
+            coefficientLedgerMapper.insert(buildLedger(playerId, roundId, "manual_" + idempotencyKey, "manual_bonus", delta, idempotencyKey, operatorId));
+        } catch (DuplicateKeyException e) {
+            return; // 幂等忽略
+        }
+        statsMapper.ensurePlayerRoundStats(playerId, roundId);
+        statsMapper.incrementPlayerCoefficient(playerId, roundId, delta);
+    }
+
+    @Transactional
+    public void manualAdjustTeam(int teamId, int roundId, int delta, String idempotencyKey, String operatorId, String reason) {
+        if (Math.abs(delta) > 100) throw new ApiException(400, "单次加成调整不能超过 ±1.0");
+        try {
+            statsMapper.insertTeamCoefficientLedger(teamId, roundId, "manual_" + idempotencyKey, "manual_bonus", delta, idempotencyKey, operatorId, reason);
+        } catch (DuplicateKeyException e) {
+            return; // 幂等忽略
+        }
+        statsMapper.ensureTeamRoundStats(teamId, roundId);
+        statsMapper.updateTeamCoefficient(teamId, roundId, delta);
+    }
+
     @Transactional
     public CoefficientResult adjustCoefficient(int playerId,
                                                 int roundId,

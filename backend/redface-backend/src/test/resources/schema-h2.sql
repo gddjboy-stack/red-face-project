@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS coefficient_ledger;
 DROP TABLE IF EXISTS popularity_ledger;
 DROP TABLE IF EXISTS team_distribution_batches;
 DROP TABLE IF EXISTS idempotency_ledger;
+DROP TABLE IF EXISTS team_coefficient_ledger;
 DROP TABLE IF EXISTS operations_log;
 DROP TABLE IF EXISTS collect_state;
 DROP TABLE IF EXISTS pool_round_stats;
@@ -96,6 +97,7 @@ CREATE TABLE team_round_stats (
   team_id                INT NOT NULL,
   round_id               INT NOT NULL,
   team_popularity        BIGINT NOT NULL DEFAULT 0,
+  coefficient            INT NOT NULL DEFAULT 100,
   distributed_popularity BIGINT NOT NULL DEFAULT 0,
   updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (team_id, round_id)
@@ -291,4 +293,19 @@ CREATE TABLE idempotency_ledger (
   result_data     VARCHAR(255) NULL,
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (idempotency_key)
+);
+
+CREATE TABLE team_coefficient_ledger (
+  id              BIGINT NOT NULL AUTO_INCREMENT,
+  team_id         INT NOT NULL,
+  round_id        INT NOT NULL,
+  task_id         VARCHAR(64) NOT NULL,
+  task_type       VARCHAR(30) NOT NULL,
+  delta           INT NOT NULL,
+  idempotency_key VARCHAR(128) NOT NULL,
+  operator_id     VARCHAR(64) NOT NULL,
+  reason          VARCHAR(500) NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_team_coef_idem (idempotency_key)
 );

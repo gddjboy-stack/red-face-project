@@ -21,7 +21,7 @@ export function simulateInject(data: any) {
 }
 
 export function manualAdjust(data: any) {
-  return jsonPost<any>('/api/admin/popularity/manual-adjust', data)
+  return jsonPost<any>('/api/admin/adjust-coefficient', data)
 }
 
 export function distributeTeam(data: any) {

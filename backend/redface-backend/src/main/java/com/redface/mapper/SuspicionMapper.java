@@ -50,7 +50,7 @@ public interface SuspicionMapper {
             ORDER BY voted_at ASC, vote_id ASC
             LIMIT 1
             """)
-    Integer findSubmittedPlayerId(@Param("userId") String userId, @Param("roundId") int roundId);
+    java.util.List<Integer> findSubmittedPlayerIds(@Param("userId") String userId, @Param("roundId") int roundId);
 
     @Select("""
             SELECT COUNT(1)

@@ -69,6 +69,15 @@ public interface StatsMapper {
      * @param roundId  轮次 ID
      * @return 当前个人人气值
      */
+    @org.apache.ibatis.annotations.Update("UPDATE team_round_stats SET coefficient = coefficient + #{delta} WHERE team_id = #{teamId} AND round_id = #{roundId}")
+    int updateTeamCoefficient(@Param("teamId") int teamId, @Param("roundId") int roundId, @Param("delta") int delta);
+
+    @org.apache.ibatis.annotations.Insert("INSERT INTO team_coefficient_ledger (team_id, round_id, task_id, task_type, delta, idempotency_key, operator_id, reason) VALUES (#{teamId}, #{roundId}, #{taskId}, #{taskType}, #{delta}, #{idempotencyKey}, #{operatorId}, #{reason})")
+    int insertTeamCoefficientLedger(@Param("teamId") int teamId, @Param("roundId") int roundId, @Param("taskId") String taskId, @Param("taskType") String taskType, @Param("delta") int delta, @Param("idempotencyKey") String idempotencyKey, @Param("operatorId") String operatorId, @Param("reason") String reason);
+
+    @org.apache.ibatis.annotations.Insert("INSERT INTO coefficient_ledger (player_id, round_id, task_id, task_type, delta, idempotency_key, operator_id, reason) VALUES (#{playerId}, #{roundId}, #{taskId}, #{taskType}, #{delta}, #{idempotencyKey}, #{operatorId}, #{reason})")
+    int insertCoefficientLedger(@Param("playerId") int playerId, @Param("roundId") int roundId, @Param("taskId") String taskId, @Param("taskType") String taskType, @Param("delta") int delta, @Param("idempotencyKey") String idempotencyKey, @Param("operatorId") String operatorId, @Param("reason") String reason);
+
     @Select("""
             SELECT COALESCE(individual_popularity, 0)
             FROM player_round_stats
