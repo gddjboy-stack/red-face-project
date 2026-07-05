@@ -176,11 +176,17 @@ public class PopularityService {
         if (!StringUtils.hasText(current.getMode())) {
             throw new IllegalStateException("当前场控mode为空");
         }
-        if (!TARGET_POOL.equals(current.getMode()) && current.getTargetId() == null) {
+        if (!TARGET_POOL.equals(current.getMode()) && !TARGET_SPY.equals(current.getMode()) && current.getTargetId() == null) {
             throw new IllegalStateException("当前场控targetId为空");
         }
         Integer roundId = req.getRoundId() == null ? current.getRoundId() : req.getRoundId();
-        return new ResolvedTarget(current.getMode(), current.getTargetId(), requireRoundId(roundId));
+        
+        // 归属语义对齐：spy+null 记入公共池；spy+targetId 记给该选手
+        String resolvedType = current.getMode();
+        if (TARGET_SPY.equals(current.getMode()) && current.getTargetId() == null) {
+            resolvedType = TARGET_POOL;
+        }
+        return new ResolvedTarget(resolvedType, current.getTargetId(), requireRoundId(roundId));
     }
 
     private Integer requireRoundId(Integer roundId) {

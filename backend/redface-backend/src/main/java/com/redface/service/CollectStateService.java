@@ -64,8 +64,8 @@ public class CollectStateService {
         if (!MODE_PLAYER.equals(mode) && !MODE_TEAM.equals(mode) && !MODE_SPY.equals(mode) && !MODE_POOL.equals(mode)) {
             throw new IllegalArgumentException("未知mode: " + mode);
         }
-        if (!MODE_POOL.equals(mode) && targetId == null) {
-            throw new IllegalArgumentException("非pool模式targetId不能为空");
+        if (!MODE_POOL.equals(mode) && !MODE_SPY.equals(mode) && targetId == null) {
+            throw new IllegalArgumentException("非pool/spy模式targetId不能为空");
         }
         if (roundId == null) {
             throw new IllegalArgumentException("roundId不能为空");

@@ -46,7 +46,7 @@ public class LiveHomeService {
         response.setSpyChannelOpen(isSpyChannelOpen(state, activeRound.getRoundId()));
         response.setUpdatedAt(toEpochSeconds(state == null ? LocalDateTime.now() : state.getUpdatedAt()));
 
-        if (state == null || state.getMode() == null || state.getTargetId() == null && !MODE_POOL.equals(state.getMode())) {
+        if (state == null || state.getMode() == null || state.getTargetId() == null && !MODE_POOL.equals(state.getMode()) && !MODE_SPY.equals(state.getMode())) {
             response.setCurrentMode(MODE_NONE);
             response.setTargetDisplayName(null);
             return response;
@@ -55,8 +55,15 @@ public class LiveHomeService {
         String mode = state.getMode();
         int statsRoundId = state.getRoundId() == null ? activeRound.getRoundId() : state.getRoundId();
         response.setCurrentMode(mode);
-        if (MODE_PLAYER.equals(mode) || MODE_SPY.equals(mode)) {
-            fillPlayerTarget(response, state.getTargetId(), statsRoundId, MODE_SPY.equals(mode));
+        if (MODE_PLAYER.equals(mode)) {
+            fillPlayerTarget(response, state.getTargetId(), statsRoundId, false);
+        } else if (MODE_SPY.equals(mode)) {
+            if (state.getTargetId() == null) {
+                response.setTargetDisplayName("卧底识破进行中");
+                response.setTargetPopularity(0L);
+            } else {
+                fillPlayerTarget(response, state.getTargetId(), statsRoundId, true);
+            }
         } else if (MODE_TEAM.equals(mode)) {
             fillTeamTarget(response, state.getTargetId(), statsRoundId);
         } else if (MODE_POOL.equals(mode)) {
