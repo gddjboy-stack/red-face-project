@@ -31,11 +31,11 @@ function getSuspicionStatus(roundId) {
   return request({ url: `/api/suspicion/status${query}` })
 }
 
-function submitSuspicion(roundId, suspectPlayerId) {
+function submitSuspicion(roundId, suspectPlayerIds) {
   return request({
     url: '/api/suspicion/submit',
     method: 'POST',
-    data: { roundId, suspectPlayerId }
+    data: { roundId, suspectPlayerIds }
   })
 }
 

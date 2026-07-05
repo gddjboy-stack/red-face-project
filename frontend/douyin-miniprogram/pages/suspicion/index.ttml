@@ -24,32 +24,37 @@
 
   <view tt:else>
     <view class="candidate-list">
-      <view
-        tt:for="{{candidates}}"
-        tt:key="playerId"
-        class="candidate-card {{item.selected ? 'selected' : ''}} {{item.submitted ? 'submitted' : ''}}"
-        data-player-id="{{item.playerId}}"
-        bindtap="selectCandidate"
-      >
-        <view class="candidate-head">
-          <view>
-            <text class="candidate-name">{{item.number}}号 {{item.playerName}}</text>
-            <text class="candidate-team">{{item.teamName || '未分队'}}</text>
+      <block tt:for="{{groupedCandidates}}" tt:key="teamId" tt:for-item="group">
+        <view class="team-title">{{group.teamName}}</view>
+        <view
+          tt:for="{{group.members}}"
+          tt:key="playerId"
+          class="candidate-card {{(votedIds.includes(item.playerId) || selectedIds.includes(item.playerId)) ? 'selected' : ''}} {{votedIds.includes(item.playerId) ? 'disabled' : ''}}"
+          data-player-id="{{item.playerId}}"
+          bindtap="selectCandidate"
+        >
+          <view class="candidate-head">
+            <view>
+              <text class="candidate-name">{{item.number}}号 {{item.playerName}}</text>
+            </view>
+            <view class="action">
+              <text class="choice-tag" tt:if="{{votedIds.includes(item.playerId)}}">已投</text>
+              <text class="choice-tag" tt:elif="{{selectedIds.includes(item.playerId)}}">已选择</text>
+              <text class="choice-tag unselected" tt:else>选择</text>
+            </view>
           </view>
-          <text class="choice-tag" tt:if="{{item.submitted}}">已提交</text>
-          <text class="choice-tag" tt:elif="{{item.selected}}">已选择</text>
-        </view>
-        <view class="progress-row">
-          <view class="progress-track">
-            <view class="progress-fill" style="width: {{item.percent}}%;"></view>
+          <view class="progress-row">
+            <view class="progress-track">
+              <view class="progress-fill" style="width: {{item.percent}}%;"></view>
+            </view>
+            <text class="progress-text">{{item.count}} 次判断</text>
           </view>
-          <text class="progress-text">{{item.count}} 次判断</text>
         </view>
-      </view>
+      </block>
     </view>
 
-    <button class="primary-btn" bindtap="submitChoice" loading="{{submitting}}" disabled="{{submitted || submitting}}">
-      {{submitted ? '本轮已提交' : '确认提交判断'}}
+    <button class="primary-btn" bindtap="submitChoice" loading="{{submitting}}" disabled="{{selectedIds.length === 0 || submitting}}">
+      确认提交判断
     </button>
     <button class="ghost-btn" bindtap="refreshStatus" loading="{{loading}}">刷新当前分布</button>
   </view>
