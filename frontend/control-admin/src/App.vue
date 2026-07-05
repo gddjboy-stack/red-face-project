@@ -93,9 +93,15 @@
           <el-card class="panel-card">
             <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
               <span>集赞目标切换</span>
-              <el-button :type="suspicionStatus.open ? 'danger' : 'success'" size="small" @click="toggleSpyMode">
-                {{ suspicionStatus.open ? '关闭卧底识破' : '开启卧底识破' }}
-              </el-button>
+              <div>
+                <span v-if="suspicionStatus.open" style="font-size: 12px; color: #e6a23c; margin-right: 10px;">
+                  识破进行中 · {{ home.targetId ? '目标: ' + home.targetDisplayName : '未指定目标' }}
+                </span>
+                <el-button v-if="suspicionStatus.open" type="primary" size="small" @click="changeSpyTarget">切换目标</el-button>
+                <el-button :type="suspicionStatus.open ? 'danger' : 'success'" size="small" @click="toggleSpyMode">
+                  {{ suspicionStatus.open ? '关闭卧底识破' : '开启卧底识破' }}
+                </el-button>
+              </div>
             </div>
             <el-form @submit.prevent label-width="100px">
               <el-form-item label="模式">
@@ -425,6 +431,26 @@
         </el-card>
       </el-tab-pane>
     </el-tabs>
+    <el-dialog v-model="spyDialogVisible" title="开启卧底识破 / 切换目标" width="400px">
+      <p style="margin-bottom: 20px; color: #666; font-size: 14px;">
+        请选择识破阶段与目标：<br>
+        阶段一：暂不指定目标（点赞入公共池）<br>
+        阶段二：指定当前目标（点赞入该选手卧底人气）
+      </p>
+      <el-form label-width="80px">
+        <el-form-item label="指定目标">
+          <el-select v-model="spyDialogTargetId" filterable clearable placeholder="暂不指定目标 (阶段一)" style="width: 100%">
+            <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="spyDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="openSpyModeWithTarget">确认提交</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </main>
 </template>
 
@@ -498,6 +524,8 @@ const tokenForm = reactive({ playerId: 1, photoAssetId: '', points: 100, count: 
 const tokenFormPhotos = ref<any[]>([])
 const refundForm = reactive({ tokenId: '', reason: '' })
 const lastBatchId = ref('')
+const spyDialogVisible = ref(false)
+const spyDialogTargetId = ref<number | null>(null)
 
 function saveOperator() {
   localStorage.setItem('operatorId', operatorId.value)
@@ -698,23 +726,31 @@ async function submitRound() {
 
 async function toggleSpyMode() {
   const willOpen = !suspicionStatus.value.open
-  const mode = willOpen ? 'spy' : 'pool'
-  await ElMessageBox.confirm(`确认要${willOpen ? '开启' : '关闭'}卧底识破投票吗？${willOpen ? '开启后观众端投票入口将立即可用。' : '关闭后将切回 pool 模式。'}`, '提示', { type: 'warning' })
-  
-  // 查找本轮的真实卧底 ID
-  let spyId = null
-  if (willOpen) {
-    const candidates = suspicionStatus.value.candidates || []
-    const spyCandidate = candidates.find((c: any) => c.isSpy)
-    // 若找不到卧底（比如测试数据不完整），暂时回退为取第一个候选人
-    spyId = spyCandidate ? spyCandidate.playerId : (candidates[0] ? candidates[0].playerId : 1)
+  if (!willOpen) {
+    await ElMessageBox.confirm('确认要关闭卧底识破投票吗？关闭后将切回 pool 模式。', '提示', { type: 'warning' })
+    await runAction('操作成功', () => setCollectState(withOperator({
+      mode: 'pool',
+      targetId: null,
+      roundId: home.value.roundId || 1
+    })), refreshMonitor)
+  } else {
+    spyDialogTargetId.value = null
+    spyDialogVisible.value = true
   }
-  
+}
+
+async function openSpyModeWithTarget() {
+  spyDialogVisible.value = false
   await runAction('操作成功', () => setCollectState(withOperator({
-    mode,
-    targetId: spyId,
+    mode: 'spy',
+    targetId: spyDialogTargetId.value,
     roundId: home.value.roundId || 1
   })), refreshMonitor)
+}
+
+async function changeSpyTarget() {
+  spyDialogTargetId.value = home.value.targetId || null
+  spyDialogVisible.value = true
 }
 
 async function submitManualBonus() {
