@@ -31,7 +31,7 @@ Page({
       this.setData({
         home,
         updatedAtText: formatTime(home.updatedAt),
-        targetPopularityText: formatNumber(home.targetPopularity),
+        targetPopularityText: (home.currentMode === 'spy' && home.targetId == null) ? '--' : formatNumber(home.targetPopularity),
         teamPopularityText: formatNumber(home.teamPopularity)
       })
     } catch (error) {
