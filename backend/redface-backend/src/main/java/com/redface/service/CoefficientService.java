@@ -4,6 +4,7 @@ import com.redface.config.AppConstants;
 import com.redface.dto.CoefficientResult;
 import com.redface.entity.CoefficientLedgerEntity;
 import com.redface.mapper.CoefficientLedgerMapper;
+import com.redface.mapper.OperationsLogMapper;
 import com.redface.mapper.StatsMapper;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,12 @@ public class CoefficientService {
 
     private final CoefficientLedgerMapper coefficientLedgerMapper;
     private final StatsMapper statsMapper;
+    private final OperationsLogMapper operationsLogMapper;
 
-    public CoefficientService(CoefficientLedgerMapper coefficientLedgerMapper, StatsMapper statsMapper) {
+    public CoefficientService(CoefficientLedgerMapper coefficientLedgerMapper, StatsMapper statsMapper, OperationsLogMapper operationsLogMapper) {
         this.coefficientLedgerMapper = coefficientLedgerMapper;
         this.statsMapper = statsMapper;
+        this.operationsLogMapper = operationsLogMapper;
     }
 
     /**
@@ -49,6 +52,9 @@ public class CoefficientService {
         }
         statsMapper.ensurePlayerRoundStats(playerId, roundId);
         statsMapper.incrementPlayerCoefficient(playerId, roundId, delta);
+        
+        String detail = String.format("{\"targetType\":\"player\",\"targetId\":%d,\"roundId\":%d,\"delta\":%d,\"idempotencyKey\":\"%s\"}", playerId, roundId, delta, idempotencyKey);
+        operationsLogMapper.insert(operatorId, "manual_bonus", String.valueOf(playerId), detail, reason);
     }
 
     @Transactional
@@ -61,6 +67,9 @@ public class CoefficientService {
         }
         statsMapper.ensureTeamRoundStats(teamId, roundId);
         statsMapper.updateTeamCoefficient(teamId, roundId, delta);
+        
+        String detail = String.format("{\"targetType\":\"team\",\"targetId\":%d,\"roundId\":%d,\"delta\":%d,\"idempotencyKey\":\"%s\"}", teamId, roundId, delta, idempotencyKey);
+        operationsLogMapper.insert(operatorId, "manual_bonus", String.valueOf(teamId), detail, reason);
     }
 
     @Transactional

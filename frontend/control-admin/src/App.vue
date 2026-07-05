@@ -700,9 +700,19 @@ async function toggleSpyMode() {
   const willOpen = !suspicionStatus.value.open
   const mode = willOpen ? 'spy' : 'pool'
   await ElMessageBox.confirm(`确认要${willOpen ? '开启' : '关闭'}卧底识破投票吗？${willOpen ? '开启后观众端投票入口将立即可用。' : '关闭后将切回 pool 模式。'}`, '提示', { type: 'warning' })
+  
+  // 查找本轮的真实卧底 ID
+  let spyId = null
+  if (willOpen) {
+    const candidates = suspicionStatus.value.candidates || []
+    const spyCandidate = candidates.find((c: any) => c.isSpy)
+    // 若找不到卧底（比如测试数据不完整），暂时回退为取第一个候选人
+    spyId = spyCandidate ? spyCandidate.playerId : (candidates[0] ? candidates[0].playerId : 1)
+  }
+  
   await runAction('操作成功', () => setCollectState(withOperator({
     mode,
-    targetId: willOpen ? 1 : null,
+    targetId: spyId,
     roundId: home.value.roundId || 1
   })), refreshMonitor)
 }
@@ -848,22 +858,4 @@ function logoutAdmin() {
   window.location.reload()
 }
 
-async function toggleSpyMode() {
-  const willOpen = !suspicionStatus.value.open
-  const mode = willOpen ? 'spy' : 'pool'
-  await ElMessageBox.confirm(`确认要${willOpen ? '开启' : '关闭'}卧底识破投票吗？${willOpen ? '开启后观众端投票入口将立即可用。' : '关闭后将切回 pool 模式。'}`, '提示', { type: 'warning' })
-  await runAction('操作成功', () => jsonPost('/api/admin/collect-state', withOperator({
-    mode,
-    targetId: willOpen ? 1 : null,
-    roundId: monitorData.value.roundId || 1
-  })), refreshMonitor)
-}
 
-async function submitManualBonus() {
-  await ElMessageBox.confirm(`确认给 ${bonusForm.targetType} ${bonusForm.targetId} 增加系数 ${bonusForm.delta}？`, '加成确认', { type: 'warning' })
-  const idempotencyKey = `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-  await runAction('加成成功', () => jsonPost('/api/admin/adjust-coefficient', withOperator({
-    ...bonusForm,
-    idempotencyKey
-  })))
-}
