@@ -12,6 +12,7 @@ public class LiveHomeResponse {
     private long targetPopularity;
     private String teamDisplayName;
     private long teamPopularity;
+    private Integer targetId;
     private boolean spyChannelOpen;
     private long updatedAt;
 
@@ -31,6 +32,8 @@ public class LiveHomeResponse {
     public void setTeamDisplayName(String teamDisplayName) { this.teamDisplayName = teamDisplayName; }
     public long getTeamPopularity() { return teamPopularity; }
     public void setTeamPopularity(long teamPopularity) { this.teamPopularity = teamPopularity; }
+    public Integer getTargetId() { return targetId; }
+    public void setTargetId(Integer targetId) { this.targetId = targetId; }
     public boolean isSpyChannelOpen() { return spyChannelOpen; }
     public void setSpyChannelOpen(boolean spyChannelOpen) { this.spyChannelOpen = spyChannelOpen; }
     public long getUpdatedAt() { return updatedAt; }

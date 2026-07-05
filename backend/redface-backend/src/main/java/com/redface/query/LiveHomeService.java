@@ -56,17 +56,22 @@ public class LiveHomeService {
         int statsRoundId = state.getRoundId() == null ? activeRound.getRoundId() : state.getRoundId();
         response.setCurrentMode(mode);
         if (MODE_PLAYER.equals(mode)) {
+            response.setTargetId(state.getTargetId());
             fillPlayerTarget(response, state.getTargetId(), statsRoundId, false);
         } else if (MODE_SPY.equals(mode)) {
             if (state.getTargetId() == null) {
+                response.setTargetId(null);
                 response.setTargetDisplayName("卧底识破进行中");
                 response.setTargetPopularity(0L);
             } else {
+                response.setTargetId(state.getTargetId());
                 fillPlayerTarget(response, state.getTargetId(), statsRoundId, true);
             }
         } else if (MODE_TEAM.equals(mode)) {
+            response.setTargetId(state.getTargetId());
             fillTeamTarget(response, state.getTargetId(), statsRoundId);
         } else if (MODE_POOL.equals(mode)) {
+            response.setTargetId(null);
             response.setTargetDisplayName("赛事总池");
             response.setTargetPopularity(valueOrZero(statsMapper.findPoolPopularity(statsRoundId)));
         } else {

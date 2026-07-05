@@ -60,6 +60,7 @@ public class C19R3b1Test extends C9MockMvcSupport {
         assertThat(home.isSpyChannelOpen()).isTrue();
         assertThat(home.getTargetDisplayName()).isEqualTo("卧底识破进行中");
         assertThat(home.getTargetPopularity()).isEqualTo(0L);
+        assertThat(home.getTargetId()).isNull();
     }
 
     @Test
@@ -95,6 +96,7 @@ public class C19R3b1Test extends C9MockMvcSupport {
         assertThat(home.getCurrentMode()).isEqualTo("spy");
         assertThat(home.isSpyChannelOpen()).isTrue();
         assertThat(home.getTargetDisplayName()).contains("Player 100");
+        assertThat(home.getTargetId()).isEqualTo(100);
 
         PopularityChangeRequest change = new PopularityChangeRequest();
         change.setSource("like");
