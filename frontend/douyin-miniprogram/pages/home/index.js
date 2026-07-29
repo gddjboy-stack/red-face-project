@@ -40,14 +40,6 @@ Page({
       this.setData({ loading: false })
     }
   },
-  onSpyTap() {
-    if (!this.data.home.spyChannelOpen) {
-      tt.showToast({ title: '该环节暂未开启', icon: 'none' })
-      return
-    }
-    const roundId = this.data.home.roundId ? `?roundId=${this.data.home.roundId}` : ''
-    tt.navigateTo({ url: `/pages/suspicion/index${roundId}` })
-  },
   goRedeem() {
     tt.navigateTo({ url: '/pages/redeem/index' })
   }

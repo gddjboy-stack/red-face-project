@@ -1,0 +1,21 @@
+=== C20-1 验收 grep 结果 ===
+执行时间: 2026-07-29 13:33:32
+范围: frontend/douyin-miniprogram/（上传包目录）
+
+--- grep -rni 'suspicion' ---
+(零命中)
+
+--- grep -rni 'popularity' ---
+./pages/home/index.js:10:    targetPopularityText: '0',
+./pages/home/index.js:11:    teamPopularityText: '0'
+./pages/home/index.js:34:        targetPopularityText: (home.currentMode === 'spy' && home.targetId == null) ? '--' : formatNumber(home.targetPopularity),
+./pages/home/index.js:35:        teamPopularityText: formatNumber(home.teamPopularity)
+./pages/home/index.ttml:35:      <text class="number-strong">{{targetPopularityText}}</text>
+./pages/home/index.ttml:39:      <text class="number-strong">{{teamPopularityText}}</text>
+./pages/player-detail/index.js:11:    popularityText: '0',
+./pages/player-detail/index.js:34:        popularityText: formatNumber(detail.popularityValue),
+./pages/player-detail/index.ttml:17:      <text class="number-strong">{{popularityText}}</text>
+./pages/players/index.js:26:        valueText: formatNumber(item.popularityValue)
+
+--- grep -rn '卧底识破\|spy-entry\|onSpyTap' ---
+(零命中)

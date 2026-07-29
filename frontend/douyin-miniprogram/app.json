@@ -3,8 +3,6 @@
     "pages/home/index",
     "pages/players/index",
     "pages/player-detail/index",
-    "pages/popularity/index",
-    "pages/suspicion/index",
     "pages/redeem/index",
     "pages/redeem-success/index",
     "pages/me/index",
@@ -29,10 +27,6 @@
       {
         "pagePath": "pages/players/index",
         "text": "选手"
-      },
-      {
-        "pagePath": "pages/popularity/index",
-        "text": "人气"
       },
       {
         "pagePath": "pages/me/index",

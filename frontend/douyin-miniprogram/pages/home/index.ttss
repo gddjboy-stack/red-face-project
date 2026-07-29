@@ -46,18 +46,6 @@
   font-size: 25rpx;
   margin-bottom: 20rpx;
 }
-.spy-entry {
-  display: flex;
-  justify-content: space-between;
-  padding: 22rpx 26rpx;
-  border-radius: 18rpx;
-  color: #ffffff;
-  background: linear-gradient(90deg, #e8a644, #f1ba68);
-  margin: 18rpx 0 26rpx;
-}
-.spy-entry.disabled {
-  opacity: .62;
-}
 .support-row {
   display: flex;
   justify-content: space-between;
