@@ -24,19 +24,27 @@
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "assets/tabbar/tab_home.png",
+        "selectedIconPath": "assets/tabbar/tab_home_active.png"
       },
       {
         "pagePath": "pages/players/index",
-        "text": "选手"
+        "text": "选手",
+        "iconPath": "assets/tabbar/tab_players.png",
+        "selectedIconPath": "assets/tabbar/tab_players_active.png"
       },
       {
         "pagePath": "pages/popularity/index",
-        "text": "人气"
+        "text": "人气",
+        "iconPath": "assets/tabbar/tab_popularity.png",
+        "selectedIconPath": "assets/tabbar/tab_popularity_active.png"
       },
       {
         "pagePath": "pages/me/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "assets/tabbar/tab_me.png",
+        "selectedIconPath": "assets/tabbar/tab_me_active.png"
       }
     ]
   }
