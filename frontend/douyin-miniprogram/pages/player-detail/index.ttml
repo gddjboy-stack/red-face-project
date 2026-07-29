@@ -12,11 +12,6 @@
         <view class="muted">{{detail.teamName || '暂未分队'}}</view>
       </view>
     </view>
-    <view class="metric-row">
-      <text>当前人气值</text>
-      <text class="number-strong">{{popularityText}}</text>
-    </view>
-    <view class="support-hint">{{detail.supportHint || '增加人气值请在直播间进行。'}}</view>
   </view>
 
   <view class="section-title">写真预览</view>

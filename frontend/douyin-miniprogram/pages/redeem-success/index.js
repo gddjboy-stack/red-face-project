@@ -1,13 +1,12 @@
 const { REDEEM_SUCCESS_KEY } = require('../../utils/constants')
-const { formatNumber, formatDateTime } = require('../../utils/format')
+const { buildShareMessage } = require('../../utils/share')
+const { formatDateTime } = require('../../utils/format')
 
 Page({
   data: {
     payload: {},
     photoPreviewUrl: '',
     imageError: false,
-    playerText: '--',
-    pointsText: '0',
     membershipAddedText: '',
     membershipUntilText: ''
   },
@@ -16,8 +15,6 @@ Page({
     this.setData({
       payload,
       photoPreviewUrl: payload.photoPreviewUrl || '',
-      playerText: payload.playerNumber ? `${payload.playerNumber}号 ${payload.playerName || ''}` : (payload.playerName || '--'),
-      pointsText: formatNumber(payload.points),
       membershipAddedText: payload.membershipAddedDays ? `会员有效期已增加 ${payload.membershipAddedDays} 天` : '',
       membershipUntilText: payload.membershipUntil ? `会员有效期至：${formatDateTime(payload.membershipUntil)}` : '',
       imageError: false
@@ -31,5 +28,8 @@ Page({
   },
   goHome() {
     tt.switchTab({ url: '/pages/home/index' })
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

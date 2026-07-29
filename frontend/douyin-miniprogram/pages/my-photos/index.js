@@ -1,4 +1,5 @@
 const { ensureLogin } = require('../../utils/auth')
+const { buildShareMessage } = require('../../utils/share')
 const { getMyPhotos } = require('../../utils/api')
 const { formatDateTime } = require('../../utils/format')
 
@@ -45,5 +46,8 @@ Page({
       items[index].imageError = true
       this.setData({ items })
     }
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

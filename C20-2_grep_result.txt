@@ -1,0 +1,24 @@
+=== C20-2 验收 grep 结果（六组关键词，终版）===
+执行时间: 2026-07-29 13:49:34
+范围: frontend/douyin-miniprogram/（上传包目录；archive/ 位于仓库根，不在本目录内）
+
+--- grep -rn 'popularity' ---
+(零命中)
+
+--- grep -rn 'Popularity' ---
+(零命中)
+
+--- grep -rn '人气' ---
+(零命中)
+
+--- grep -rn '直播' ---
+(零命中)
+
+--- grep -rn '点赞' ---
+(零命中)
+
+--- grep -rn '评论' ---
+(零命中)
+
+--- 附加自查: 投票 / 打榜 / 应援 / 助力 / 热度 / 支持值 / 抖币 / suspicion / spy ---
+(零命中)

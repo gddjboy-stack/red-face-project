@@ -1,14 +1,13 @@
 const { ensureLogin } = require('../../utils/auth')
+const { buildShareMessage } = require('../../utils/share')
 const { getLiveHome } = require('../../utils/api')
-const { formatNumber, formatTime } = require('../../utils/format')
+const { formatTime } = require('../../utils/format')
 
 Page({
   data: {
     loading: false,
     home: {},
-    updatedAtText: '--',
-    targetPopularityText: '0',
-    teamPopularityText: '0'
+    updatedAtText: '--'
   },
   async onLoad() {
     await this.bootstrap()
@@ -30,9 +29,7 @@ Page({
       const home = await getLiveHome()
       this.setData({
         home,
-        updatedAtText: formatTime(home.updatedAt),
-        targetPopularityText: (home.currentMode === 'spy' && home.targetId == null) ? '--' : formatNumber(home.targetPopularity),
-        teamPopularityText: formatNumber(home.teamPopularity)
+        updatedAtText: formatTime(home.updatedAt)
       })
     } catch (error) {
       tt.showToast({ title: error.message || '数据获取失败', icon: 'none' })
@@ -42,5 +39,8 @@ Page({
   },
   goRedeem() {
     tt.navigateTo({ url: '/pages/redeem/index' })
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

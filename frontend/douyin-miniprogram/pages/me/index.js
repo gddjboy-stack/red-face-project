@@ -1,4 +1,5 @@
 const { ensureLogin } = require('../../utils/auth')
+const { buildShareMessage } = require('../../utils/share')
 const { getMyPhotos } = require('../../utils/api')
 const { formatDateTime } = require('../../utils/format')
 
@@ -41,5 +42,8 @@ Page({
   },
   goRedeem() {
     tt.navigateTo({ url: '/pages/redeem/index' })
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

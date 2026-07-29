@@ -64,12 +64,6 @@ page {
   color: #958a91;
 }
 
-.number-strong {
-  color: #d69a36;
-  font-size: 38rpx;
-  font-weight: 800;
-}
-
 .primary-btn,
 .secondary-btn,
 .ghost-btn {

@@ -3,8 +3,6 @@
 .number-badge { width:108rpx; height:108rpx; line-height:108rpx; text-align:center; border-radius:26rpx; background:linear-gradient(135deg,#e7a341,#f1ba68); color:#fff; font-size:42rpx; font-weight:900; }
 .detail-main { flex:1; }
 .detail-name { font-size:36rpx; font-weight:900; color:#4b3d44; margin-bottom:10rpx; }
-.metric-row { display:flex; justify-content:space-between; align-items:center; padding:22rpx 0; border-top:2rpx solid rgba(214,154,54,.16); border-bottom:2rpx solid rgba(214,154,54,.16); color:#6f636a; }
-.support-hint { margin-top:22rpx; padding:18rpx; border-radius:18rpx; background:rgba(130,118,125,.08); color:#82767d; font-size:24rpx; line-height:1.6; }
 .section-title { font-size:30rpx; font-weight:800; color:#d69a36; margin:26rpx 0 16rpx; }
 .photo-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20rpx; margin-bottom:28rpx; }
 .photo-card { background:#fff; border-radius:22rpx; overflow:hidden; box-shadow:0 10rpx 32rpx rgba(190,114,88,.12); }

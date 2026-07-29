@@ -1,6 +1,6 @@
 const { ensureLogin } = require('../../utils/auth')
+const { buildShareMessage } = require('../../utils/share')
 const { getPlayers } = require('../../utils/api')
-const { formatNumber } = require('../../utils/format')
 
 Page({
   data: {
@@ -22,8 +22,7 @@ Page({
       const data = await getPlayers(this.data.roundId)
       const items = (data.items || []).map(item => ({
         ...item,
-        imageError: false,
-        valueText: formatNumber(item.popularityValue)
+        imageError: false
       }))
       this.setData({
         roundId: data.roundId || this.data.roundId || '',
@@ -51,5 +50,8 @@ Page({
       items[index].imageError = true
       this.setData({ items })
     }
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

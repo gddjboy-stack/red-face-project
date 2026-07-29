@@ -1,6 +1,6 @@
 const { ensureLogin } = require('../../utils/auth')
+const { buildShareMessage } = require('../../utils/share')
 const { getPlayerDetail } = require('../../utils/api')
-const { formatNumber } = require('../../utils/format')
 
 Page({
   data: {
@@ -8,7 +8,6 @@ Page({
     roundId: '',
     loading: false,
     detail: {},
-    popularityText: '0',
     photos: []
   },
   async onLoad(options = {}) {
@@ -31,7 +30,6 @@ Page({
       this.setData({
         detail,
         roundId: detail.roundId || this.data.roundId,
-        popularityText: formatNumber(detail.popularityValue),
         photos
       })
     } catch (error) {
@@ -50,5 +48,8 @@ Page({
   },
   goRedeem() {
     tt.navigateTo({ url: '/pages/redeem/index' })
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

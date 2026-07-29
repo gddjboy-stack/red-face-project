@@ -9,5 +9,4 @@
 .player-main { flex:1; min-width:0; }
 .player-name { font-size:30rpx; font-weight:800; color:#4b3d44; margin-bottom:8rpx; }
 .player-side { text-align:right; }
-.player-value { color:#d69a36; font-size:32rpx; font-weight:800; }
 .side-tip { margin-top:8rpx; color:#9b8b92; font-size:24rpx; }

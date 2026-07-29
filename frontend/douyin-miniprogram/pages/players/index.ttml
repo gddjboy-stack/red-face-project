@@ -6,7 +6,7 @@
 
   <view class="card round-card">
     <view class="round-title">{{roundName || '当前轮次'}}</view>
-    <view class="round-text">选手按序号展示，当前人气值由直播互动数据实时更新。</view>
+    <view class="round-text">选手按序号展示，点击可查看选手介绍与写真。</view>
     <view class="round-row">
       <text>轮次 ID</text>
       <input class="round-input" type="number" value="{{roundId}}" placeholder="默认当前轮次" bindinput="onRoundInput" />
@@ -27,7 +27,6 @@
         <view class="muted">{{item.teamName || '暂未分队'}}</view>
       </view>
       <view class="player-side">
-        <view class="player-value">{{item.valueText}}</view>
         <view class="side-tip">查看</view>
       </view>
     </view>

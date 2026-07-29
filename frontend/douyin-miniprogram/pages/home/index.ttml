@@ -18,25 +18,17 @@
     <view class="row">
       <view>
         <text class="live-dot"></text>
-        <text class="live-title">{{home.liveStatus === 'live' ? '正在直播 · ' + (home.roundName || '') : '当前暂无直播互动'}}</text>
+        <text class="live-title">{{home.liveStatus === 'live' ? '活动进行中 · ' + (home.roundName || '') : '当前暂无进行中的活动'}}</text>
       </view>
       <text class="muted">···</text>
     </view>
-    <view class="live-desc" tt:if="{{home.liveStatus === 'live'}}">当前互动计入：{{home.targetDisplayName || '待选择对象'}}</view>
-    <view class="live-desc" tt:else>开播后数据将自动更新。</view>
-    <view class="live-tip">* 增加人气值/留言请在直播间进行</view>
+    <view class="live-desc" tt:if="{{home.liveStatus === 'live'}}">活动进行中，敬请关注现场互动。</view>
+    <view class="live-desc" tt:else>活动开始后信息将自动更新。</view>
+    <view class="live-tip">* 相关互动请在活动现场参与</view>
 
     <view class="support-row">
-      <text>当前支持对象</text>
-      <text>实时数据更新 {{updatedAtText}}</text>
-    </view>
-    <view class="metric-box">
-      <text>{{home.targetDisplayName || '--'}}</text>
-      <text class="number-strong">{{targetPopularityText}}</text>
-    </view>
-    <view class="metric-box muted-box">
-      <text>{{home.teamDisplayName || '团队人气'}}</text>
-      <text class="number-strong">{{teamPopularityText}}</text>
+      <text>信息更新时间</text>
+      <text>{{updatedAtText}}</text>
     </view>
   </view>
 

@@ -1,4 +1,5 @@
 const { ensureLogin } = require('../../utils/auth')
+const { buildShareMessage } = require('../../utils/share')
 const { redeemToken } = require('../../utils/api')
 const { ERROR_MESSAGES, REDEEM_SUCCESS_KEY } = require('../../utils/constants')
 
@@ -49,5 +50,8 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
+  },
+  onShareAppMessage() {
+    return buildShareMessage()
   }
 })

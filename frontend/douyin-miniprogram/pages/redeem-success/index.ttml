@@ -5,12 +5,10 @@
   <view class="card success-card">
     <view class="success-icon">✓</view>
     <view class="success-title">数字写真已自动存入我的收藏</view>
-    <view class="success-subtitle">本次人气值已计入对应选手。</view>
+    <view class="success-subtitle">您的专属权益已到账。</view>
     <image tt:if="{{!imageError && photoPreviewUrl}}" class="photo-preview safe-image" src="{{photoPreviewUrl}}" mode="aspectFill" binderror="onImageError" />
     <image tt:else class="photo-preview safe-image" src="/assets/placeholders/photo_clean_stage.svg" mode="aspectFill" />
-    <view class="info-row"><text>选手</text><text>{{playerText}}</text></view>
-    <view class="info-row"><text>团队</text><text>{{payload.teamName || '--'}}</text></view>
-    <view class="info-row"><text>增加人气值</text><text class="number-strong">{{pointsText}}</text></view>
+    <view class="info-row"><text>数字写真</text><text>已存入我的收藏</text></view>
     <view tt:if="{{membershipAddedText}}" class="membership-box">
       <view class="membership-title">{{membershipAddedText}}</view>
       <view class="membership-desc">{{membershipUntilText}}</view>
