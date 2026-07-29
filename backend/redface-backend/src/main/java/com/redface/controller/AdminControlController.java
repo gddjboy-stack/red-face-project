@@ -5,6 +5,7 @@ import com.redface.dto.AdminOperationResult;
 import com.redface.dto.AdminRequests;
 import com.redface.service.CoefficientService;
 import com.redface.dto.DistributionResult;
+import com.redface.dto.GroupVoteSummaryResponse;
 import com.redface.dto.LiveHomeResponse;
 import com.redface.dto.PopularityBoardResponse;
 import com.redface.dto.PopularityChangeResult;
@@ -78,5 +79,22 @@ public class AdminControlController {
     @PostMapping("/team-distribution")
     public ApiResponse<AdminOperationResult<DistributionResult>> distributeTeam(@RequestBody AdminRequests.TeamDistributionRequest request) {
         return ApiResponse.success(adminControlService.distributeTeam(request));
+    }
+
+    /**
+     * C20-3 群投票结果录入（增量累加，负数冲销，幂等防连点）。
+     */
+    @PostMapping("/group-vote/entry")
+    public ApiResponse<AdminOperationResult<AdminControlService.GroupVoteEntryOutcome>> recordGroupVote(
+            @RequestBody AdminRequests.GroupVoteEntryRequest request) {
+        return ApiResponse.success(adminControlService.recordGroupVote(request));
+    }
+
+    /**
+     * C20-3 查询指定轮次各选手群投票累计票数。
+     */
+    @GetMapping("/group-vote/summary")
+    public ApiResponse<GroupVoteSummaryResponse> getGroupVoteSummary(@RequestParam int roundId) {
+        return ApiResponse.success(adminControlService.getGroupVoteSummary(roundId));
     }
 }

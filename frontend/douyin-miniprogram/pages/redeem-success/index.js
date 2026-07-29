@@ -1,7 +1,11 @@
 const { REDEEM_SUCCESS_KEY } = require('../../utils/constants')
 const { formatNumber, formatDateTime } = require('../../utils/format')
+const { buildShareMessage } = require('../../utils/share')
 
 Page({
+  onShareAppMessage() {
+    return buildShareMessage()
+  },
   data: {
     payload: {},
     photoPreviewUrl: '',

@@ -1,8 +1,12 @@
 const { ensureLogin } = require('../../utils/auth')
 const { getMyPhotos } = require('../../utils/api')
 const { formatDateTime } = require('../../utils/format')
+const { buildShareMessage } = require('../../utils/share')
 
 Page({
+  onShareAppMessage() {
+    return buildShareMessage()
+  },
   data: {
     loading: false,
     total: 0,

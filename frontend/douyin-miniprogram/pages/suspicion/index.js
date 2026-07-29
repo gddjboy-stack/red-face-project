@@ -1,5 +1,6 @@
 const { ensureLogin } = require('../../utils/auth')
 const { getSuspicionStatus, submitSuspicion } = require('../../utils/api')
+const { buildShareMessage } = require('../../utils/share')
 
 const ERROR_MESSAGES = {
   41001: '该环节暂未开启。',
@@ -10,6 +11,9 @@ const ERROR_MESSAGES = {
 }
 
 Page({
+  onShareAppMessage() {
+    return buildShareMessage()
+  },
   data: {
     loading: false,
     submitting: false,

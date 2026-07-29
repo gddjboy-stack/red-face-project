@@ -1,8 +1,12 @@
 const { ensureLogin } = require('../../utils/auth')
 const { getPlayers } = require('../../utils/api')
 const { formatNumber } = require('../../utils/format')
+const { buildShareMessage } = require('../../utils/share')
 
 Page({
+  onShareAppMessage() {
+    return buildShareMessage()
+  },
   data: {
     roundId: '',
     roundName: '',

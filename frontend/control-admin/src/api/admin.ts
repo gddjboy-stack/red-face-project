@@ -32,3 +32,13 @@ export function getSuspicionStatus(roundId?: number) {
   const query = roundId ? `?roundId=${roundId}` : ''
   return request<any>(`/api/admin/suspicion/status${query}`)
 }
+
+/** C20-3 群投票结果录入（增量累加，负数冲销，带幂等键防连点） */
+export function recordGroupVote(data: any) {
+  return jsonPost<any>('/api/admin/group-vote/entry', data)
+}
+
+/** C20-3 查询指定轮次各选手群投票累计票数 */
+export function getGroupVoteSummary(roundId: number) {
+  return request<any>(`/api/admin/group-vote/summary?roundId=${roundId}`)
+}

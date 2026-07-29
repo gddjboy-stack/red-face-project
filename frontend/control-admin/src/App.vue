@@ -203,6 +203,40 @@
           </el-card>
 
           <el-card class="panel-card">
+            <div class="panel-title">群投票结果录入（C20-3）</div>
+            <p class="tip warning-text">8/1 当晚专用：把粉丝群投票结果录入系统。正数累加、负数冲销，同轮同选手可多次录入。提交前请核对群投票截图。</p>
+            <el-form @submit.prevent label-width="100px">
+              <el-form-item label="轮次">
+                <el-select v-model="groupVoteForm.roundId" filterable placeholder="请选择轮次" style="width: 220px" @change="refreshGroupVoteSummary">
+                  <el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="选手">
+                <el-select v-model="groupVoteForm.playerId" filterable clearable placeholder="请选择选手" style="width: 220px">
+                  <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="票数增量">
+                <el-input-number v-model="groupVoteForm.votes" :step="1" placeholder="正数累加，负数冲销" />
+              </el-form-item>
+              <el-form-item label="原因">
+                <el-input v-model="groupVoteForm.reason" placeholder="例：8/1粉丝群第一轮投票" />
+              </el-form-item>
+              <div class="form-actions">
+                <el-button native-type="button" type="primary" :loading="groupVoteSubmitting" @click="submitGroupVote">确认录入</el-button>
+              </div>
+            </el-form>
+            <div class="panel-title" style="margin-top: 12px;">本轮累计票数（冲销后净值）</div>
+            <el-table :data="groupVoteSummary.items || []" size="small" height="220">
+              <el-table-column prop="playerNumber" label="序号" width="80" />
+              <el-table-column prop="playerName" label="选手" />
+              <el-table-column prop="totalVotes" label="累计票数" width="110" />
+              <el-table-column prop="entryCount" label="录入笔数" width="100" />
+            </el-table>
+            <p class="tip">合计：{{ groupVoteSummary.totalVotes ?? 0 }} 票 · <el-button native-type="button" link type="primary" @click="refreshGroupVoteSummary">刷新</el-button></p>
+          </el-card>
+
+          <el-card class="panel-card">
             <div class="panel-title">手动加成</div>
             <el-form @submit.prevent label-width="80px">
               <el-form-item label="目标类型">
@@ -457,7 +491,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { distributeTeam, getAdminBoard, getAdminHome, getSuspicionStatus, manualAdjust, setCollectState, simulateInject } from './api/admin'
+import { distributeTeam, getAdminBoard, getAdminHome, getGroupVoteSummary, getSuspicionStatus, manualAdjust, recordGroupVote, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
 import { generateTokens, exportTokens } from './api/tokens'
@@ -527,6 +561,16 @@ const lastBatchId = ref('')
 const spyDialogVisible = ref(false)
 const spyDialogTargetId = ref<number | null>(null)
 
+// C20-3 群投票录入：幂等键在表单重置时预生成，连点重复提交会被后端幂等拦截
+const groupVoteForm = reactive<{ roundId: number | null; playerId: number | null; votes: number | null; reason: string }>({ roundId: null, playerId: null, votes: null, reason: '' })
+const groupVoteSummary = ref<any>({ items: [], totalVotes: 0 })
+const groupVoteSubmitting = ref(false)
+let groupVoteIdempotencyKey = generateGroupVoteKey()
+
+function generateGroupVoteKey() {
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
+}
+
 function saveOperator() {
   localStorage.setItem('operatorId', operatorId.value)
 }
@@ -582,6 +626,7 @@ function applyDefaultRound() {
   if (collectForm.roundId == null) collectForm.roundId = fallbackId
   if (manualForm.roundId == null) manualForm.roundId = fallbackId
   if (distributionForm.roundId == null) distributionForm.roundId = fallbackId
+  if (groupVoteForm.roundId == null) groupVoteForm.roundId = fallbackId
 }
 
 /** 切换集赞模式时清空旧目标，避免选手 ID 被错当成团队 ID 提交（Claude 裁定要求）。 */
@@ -753,6 +798,63 @@ async function changeSpyTarget() {
   spyDialogVisible.value = true
 }
 
+/** C20-3 群投票结果录入：二次确认 + 幂等防连点 + 提交后刷新累计表。 */
+async function submitGroupVote() {
+  if (groupVoteForm.roundId == null) {
+    ElMessage.warning('请选择轮次')
+    return
+  }
+  if (groupVoteForm.playerId == null) {
+    ElMessage.warning('请选择选手')
+    return
+  }
+  if (!groupVoteForm.votes) {
+    ElMessage.warning('票数不能为空或 0（正数累加，负数冲销）')
+    return
+  }
+  if (!groupVoteForm.reason.trim()) {
+    ElMessage.warning('请填写原因（例：8/1粉丝群第一轮投票）')
+    return
+  }
+  const player = players.value.find((p) => p.playerId === groupVoteForm.playerId)
+  const actionText = groupVoteForm.votes > 0 ? `累加 ${groupVoteForm.votes} 票` : `冲销 ${-groupVoteForm.votes} 票`
+  await ElMessageBox.confirm(`确认给【${player ? player.number + '号 ' + player.name : groupVoteForm.playerId}】${actionText}？将写入人气流水与操作日志。`, '群投票录入确认', { type: 'warning' })
+  groupVoteSubmitting.value = true
+  try {
+    const result = await recordGroupVote(withOperator({
+      roundId: groupVoteForm.roundId,
+      playerId: groupVoteForm.playerId,
+      votes: groupVoteForm.votes,
+      reason: groupVoteForm.reason,
+      idempotencyKey: groupVoteIdempotencyKey
+    }))
+    const outcome = result?.result || {}
+    if (outcome.duplicated) {
+      ElMessage.warning('重复提交已拦截（幂等），未重复记账')
+    } else {
+      ElMessage.success(`录入成功，该选手本轮累计 ${outcome.currentTotalVotes ?? '-'} 票`)
+    }
+    // 提交成功后更换幂等键并重置票数，保留轮次/选手方便连续录入
+    groupVoteIdempotencyKey = generateGroupVoteKey()
+    groupVoteForm.votes = null
+    await refreshGroupVoteSummary()
+  } catch (error: any) {
+    ElMessage.error(error.message || '群投票录入失败')
+  } finally {
+    groupVoteSubmitting.value = false
+  }
+}
+
+/** C20-3 刷新本轮各选手群投票累计票数。 */
+async function refreshGroupVoteSummary() {
+  if (groupVoteForm.roundId == null) return
+  try {
+    groupVoteSummary.value = await getGroupVoteSummary(groupVoteForm.roundId)
+  } catch (error: any) {
+    ElMessage.error(error.message || '累计票数查询失败')
+  }
+}
+
 async function submitManualBonus() {
   await ElMessageBox.confirm(`确认给 ${bonusForm.targetType} ${bonusForm.targetId} 增加系数 ${bonusForm.delta}？`, '加成确认', { type: 'warning' })
   const idempotencyKey = `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
@@ -824,6 +926,7 @@ onMounted(async () => {
   }
   await refreshPhotos()
   await refreshMonitor()
+  await refreshGroupVoteSummary()
 })
 
 async function onTokenPlayerChange() {

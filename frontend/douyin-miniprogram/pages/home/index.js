@@ -1,8 +1,12 @@
 const { ensureLogin } = require('../../utils/auth')
 const { getLiveHome } = require('../../utils/api')
 const { formatNumber, formatTime } = require('../../utils/format')
+const { buildShareMessage } = require('../../utils/share')
 
 Page({
+  onShareAppMessage() {
+    return buildShareMessage()
+  },
   data: {
     loading: false,
     home: {},

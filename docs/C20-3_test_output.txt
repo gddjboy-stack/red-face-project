@@ -1,0 +1,8 @@
+# C20-3 测试输出摘要（2026-07-29，mvn test 全量）
+
+## GroupVoteEntryTest（本卡新增，5 项测试）
+[[1;34mINFO[m] [1;32mTests run: [0;1;32m5[m, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in com.redface.service.[1mGroupVoteEntryTest[m
+
+## 全量回归
+[[1;34mINFO[m] [1;32mTests run: 108, Failures: 0, Errors: 0, Skipped: 0[m
+[[1;34mINFO[m] [1;32mBUILD SUCCESS[m

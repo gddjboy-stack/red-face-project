@@ -1,8 +1,12 @@
 const { ensureLogin } = require('../../utils/auth')
 const { redeemToken } = require('../../utils/api')
 const { ERROR_MESSAGES, REDEEM_SUCCESS_KEY } = require('../../utils/constants')
+const { buildShareMessage } = require('../../utils/share')
 
 Page({
+  onShareAppMessage() {
+    return buildShareMessage()
+  },
   data: {
     token: '',
     submitting: false,

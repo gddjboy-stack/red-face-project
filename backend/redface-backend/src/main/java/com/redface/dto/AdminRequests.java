@@ -108,4 +108,28 @@ public final class AdminRequests {
         public String getReason() { return reason; }
         public void setReason(String reason) { this.reason = reason; }
     }
+
+    /**
+     * C20-3 群投票结果录入请求。votes 为增量（可负数冲销）；idempotencyKey 由前端生成以防连点重复。
+     */
+    public static class GroupVoteEntryRequest {
+        private Integer roundId;
+        private Integer playerId;
+        private Long votes;
+        private String operatorId;
+        private String reason;
+        private String idempotencyKey;
+        public Integer getRoundId() { return roundId; }
+        public void setRoundId(Integer roundId) { this.roundId = roundId; }
+        public Integer getPlayerId() { return playerId; }
+        public void setPlayerId(Integer playerId) { this.playerId = playerId; }
+        public Long getVotes() { return votes; }
+        public void setVotes(Long votes) { this.votes = votes; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+        public String getIdempotencyKey() { return idempotencyKey; }
+        public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+    }
 }
