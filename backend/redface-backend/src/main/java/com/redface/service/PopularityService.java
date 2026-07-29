@@ -29,7 +29,6 @@ public class PopularityService {
     private static final String SOURCE_COMMENT = "comment";
     private static final String SOURCE_MANUAL = "manual";
     private static final String SOURCE_REFUND = "refund";
-    private static final String SOURCE_GROUP_VOTE = "group_vote";
 
     private final PopularityLedgerMapper ledgerMapper;
     private final StatsMapper statsMapper;
@@ -90,8 +89,7 @@ public class PopularityService {
             case "refund":
             case "team_distribution":
                 return rawValue; // 这些来源直接就是人气值
-            case "group_vote":
-                return rawValue; // C20-3: 群投票得票直接记票数，1票=1，不做换算
+            // C20-3-FIX: group_vote 已移出人气账本（独立表 group_vote_ledger），人气引擎不再接受该来源
             default:
                 throw new IllegalArgumentException("未知source: " + source);
         }
@@ -152,8 +150,7 @@ public class PopularityService {
         if (req.getRawValue() == 0) {
             throw new IllegalArgumentException("rawValue不能为0");
         }
-        boolean negativeAllowed = SOURCE_MANUAL.equals(req.getSource()) || SOURCE_REFUND.equals(req.getSource())
-                || SOURCE_GROUP_VOTE.equals(req.getSource()); // C20-3: 群投票录负数冲销，复用manual冲销语义
+        boolean negativeAllowed = SOURCE_MANUAL.equals(req.getSource()) || SOURCE_REFUND.equals(req.getSource());
         if (!negativeAllowed && req.getRawValue() < 0) {
             throw new IllegalArgumentException("该source的rawValue必须为正数: " + req.getSource());
         }

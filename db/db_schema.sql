@@ -293,3 +293,18 @@ CREATE TABLE team_coefficient_ledger (
   CONSTRAINT fk_team_coef_ledger_team FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_team_coef_ledger_round FOREIGN KEY (round_id) REFERENCES rounds (round_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB COMMENT='团队加成系数变动流水';
+
+-- C20-3-FIX: 群投票独立账本（票数只判卧底胜负，不折算人气，与popularity_ledger物理隔离）
+CREATE TABLE group_vote_ledger (
+  entry_id        BIGINT NOT NULL AUTO_INCREMENT,
+  round_id        INT NOT NULL,
+  player_id       INT NOT NULL,
+  votes           BIGINT NOT NULL COMMENT '票数增量(正数累加/负数冲销)',
+  idempotency_key VARCHAR(128) NOT NULL,
+  operator_id     VARCHAR(64) NOT NULL,
+  reason          VARCHAR(500) NOT NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entry_id),
+  UNIQUE KEY uq_gv_idem (idempotency_key),
+  KEY idx_gv_round_player (round_id, player_id)
+) ENGINE=InnoDB COMMENT='群投票流水账-独立于人气账本,只用于卧底胜负判定';

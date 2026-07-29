@@ -11,6 +11,7 @@ import com.redface.dto.PopularityChangeRequest;
 import com.redface.dto.PopularityChangeResult;
 import com.redface.dto.SimResult;
 import com.redface.entity.CollectState;
+import com.redface.mapper.GroupVoteLedgerMapper;
 import com.redface.mapper.OperationsLogMapper;
 import com.redface.mapper.PopularityLedgerMapper;
 import com.redface.query.LiveHomeService;
@@ -27,8 +28,6 @@ import org.springframework.util.StringUtils;
 @Service
 public class AdminControlService {
     private static final String SOURCE_MANUAL = "manual";
-    private static final String SOURCE_GROUP_VOTE = "group_vote";
-    private static final String TARGET_SPY = "spy";
     private static final String METHOD_EQUAL = "equal";
 
     private final CollectStateService collectStateService;
@@ -39,6 +38,7 @@ public class AdminControlService {
     private final PopularityBoardService popularityBoardService;
     private final OperationsLogMapper operationsLogMapper;
     private final PopularityLedgerMapper popularityLedgerMapper;
+    private final GroupVoteLedgerMapper groupVoteLedgerMapper;
 
     public AdminControlService(CollectStateService collectStateService,
                                LiveDataService liveDataService,
@@ -47,7 +47,8 @@ public class AdminControlService {
                                LiveHomeService liveHomeService,
                                PopularityBoardService popularityBoardService,
                                OperationsLogMapper operationsLogMapper,
-                               PopularityLedgerMapper popularityLedgerMapper) {
+                               PopularityLedgerMapper popularityLedgerMapper,
+                               GroupVoteLedgerMapper groupVoteLedgerMapper) {
         this.collectStateService = collectStateService;
         this.liveDataService = liveDataService;
         this.popularityService = popularityService;
@@ -56,6 +57,7 @@ public class AdminControlService {
         this.popularityBoardService = popularityBoardService;
         this.operationsLogMapper = operationsLogMapper;
         this.popularityLedgerMapper = popularityLedgerMapper;
+        this.groupVoteLedgerMapper = groupVoteLedgerMapper;
     }
 
     public LiveHomeResponse getLiveHome() {
@@ -131,8 +133,9 @@ public class AdminControlService {
     }
 
     /**
-     * C20-3 群投票结果录入。同轮同选手可多次录入累加；负数为冲销（复用 manual 冲销语义）；
-     * 幂等键由前端生成，重复提交返回 duplicated，防连点。计入 spy_popularity（不影响个人积分口径）。
+     * C20-3-FIX 群投票结果录入。同轮同选手可多次录入累加；负数为冲销；
+     * 幂等键由前端生成，重复提交返回 duplicated，防连点。
+     * 票数写入独立表 group_vote_ledger，与人气账本物理隔离，只用于卧底胜负判定，不折算人气。
      *
      * @param request 群投票录入请求
      * @return 录入结果（含本轮该选手录入后的累计票数）
@@ -152,20 +155,15 @@ public class AdminControlService {
             throw new IllegalArgumentException("votes不能为0（正数累加，负数冲销）");
         }
 
-        PopularityChangeRequest changeRequest = new PopularityChangeRequest();
-        changeRequest.setTargetType(TARGET_SPY);
-        changeRequest.setTargetId(request.getPlayerId());
-        changeRequest.setRoundId(request.getRoundId());
-        changeRequest.setSource(SOURCE_GROUP_VOTE);
-        changeRequest.setRawValue(request.getVotes());
-        changeRequest.setOperatorId(request.getOperatorId());
-        changeRequest.setReason(request.getReason());
-        changeRequest.setMetadata("{\"channel\":\"fan_group_vote\"}");
-        changeRequest.setOccurredAt(LocalDateTime.now());
-        changeRequest.setIdempotencyKey("gv_" + request.getIdempotencyKey());
-        PopularityChangeResult result = popularityService.applyChange(changeRequest);
+        // 幂等：先查后插，避免在 @Transactional 内捕获 DuplicateKeyException 导致事务被标记回滚；
+        // 并发窗口仍由表内唯一约束兜底（极端并发下撞到约束冲突则整个请求失败重试，不会重复记账）。
+        String idempotencyKey = "gv_" + request.getIdempotencyKey();
+        boolean duplicated = groupVoteLedgerMapper.countByIdempotencyKey(idempotencyKey) > 0;
+        if (!duplicated) {
+            groupVoteLedgerMapper.insert(request.getRoundId(), request.getPlayerId(), request.getVotes(),
+                    idempotencyKey, request.getOperatorId(), request.getReason());
+        }
 
-        boolean duplicated = result.isDuplicated();
         if (!duplicated) {
             operationsLogMapper.insert(request.getOperatorId(), "group_vote_entry",
                     "player:" + request.getPlayerId(),
@@ -175,18 +173,14 @@ public class AdminControlService {
                     request.getReason());
         }
 
-        long currentTotal = popularityLedgerMapper.summarizeBySource(request.getRoundId(), SOURCE_GROUP_VOTE).stream()
-                .filter(item -> request.getPlayerId().equals(item.getPlayerId()))
-                .mapToLong(GroupVoteSummaryItem::getTotalVotes)
-                .findFirst()
-                .orElse(0L);
+        long currentTotal = groupVoteLedgerMapper.sumVotes(request.getRoundId(), request.getPlayerId());
         GroupVoteEntryOutcome outcome = new GroupVoteEntryOutcome(duplicated, request.getVotes(), currentTotal);
         String message = duplicated ? "重复提交已拦截（幂等），未重复记账" : "群投票录入成功";
         return AdminOperationResult.of("group_vote_entry", message, outcome);
     }
 
     /**
-     * C20-3 查询指定轮次各选手群投票累计票数（冲销后净值）。
+     * C20-3-FIX 查询指定轮次各选手群投票累计票数（冲销后净值），数据源为独立表 group_vote_ledger。
      *
      * @param roundId 轮次 ID
      * @return 汇总响应
@@ -195,7 +189,7 @@ public class AdminControlService {
         if (roundId <= 0) {
             throw new IllegalArgumentException("roundId必须为正数");
         }
-        java.util.List<GroupVoteSummaryItem> items = popularityLedgerMapper.summarizeBySource(roundId, SOURCE_GROUP_VOTE);
+        java.util.List<GroupVoteSummaryItem> items = groupVoteLedgerMapper.summarize(roundId);
         long total = items.stream().mapToLong(GroupVoteSummaryItem::getTotalVotes).sum();
         return new GroupVoteSummaryResponse(roundId, total, items);
     }

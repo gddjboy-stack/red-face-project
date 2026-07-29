@@ -1,4 +1,5 @@
 -- H2 测试环境可能因不同 Spring 测试上下文重复初始化，先按外键反向顺序清理旧表。
+DROP TABLE IF EXISTS group_vote_ledger;
 DROP TABLE IF EXISTS user_session;
 DROP TABLE IF EXISTS suspicion_votes;
 DROP TABLE IF EXISTS user_membership;
@@ -308,4 +309,19 @@ CREATE TABLE team_coefficient_ledger (
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_team_coef_idem (idempotency_key)
+);
+
+-- C20-3-FIX: 群投票独立账本
+CREATE TABLE group_vote_ledger (
+  entry_id        BIGINT NOT NULL AUTO_INCREMENT,
+  round_id        INT NOT NULL,
+  player_id       INT NOT NULL,
+  votes           BIGINT NOT NULL,
+  idempotency_key VARCHAR(128) NOT NULL,
+  operator_id     VARCHAR(64) NOT NULL,
+  reason          VARCHAR(500) NOT NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entry_id),
+  UNIQUE KEY uq_gv_idem (idempotency_key),
+  KEY idx_gv_round_player (round_id, player_id)
 );
