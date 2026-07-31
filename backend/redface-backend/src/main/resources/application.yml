@@ -53,6 +53,20 @@ redface:
   admin:
     token: ${ADMIN_TOKEN:}
 
+  # C20-5 大屏展示端令牌。与 admin token 物理隔离，只能读 /api/display/** 下的只读接口。
+  # 安全基线（Claude 裁定 2.2）：display 侧一律 fail-closed —— 未配置 DISPLAY_TOKEN 时
+  # /api/display/** 全量 401，绝不沿用 admin 侧为兼容联调保留的放行行为。
+  # 生产另有启动护栏强制校验（见 ProdSecurityGuard）。
+  display:
+    token: ${DISPLAY_TOKEN:}
+    # Cookie 是否仅限 HTTPS。本地 http 联调保持 false；生产必须 true。
+    cookie-secure: ${DISPLAY_COOKIE_SECURE:false}
+    # 展示 Cookie 有效期（秒）。默认 12 小时，覆盖单场直播全程后自然失效。
+    cookie-max-age-seconds: ${DISPLAY_COOKIE_MAX_AGE:43200}
+    # 换票防爆破：同一 IP 连续失败次数上限与锁定时长（秒）。
+    max-login-failures: ${DISPLAY_MAX_LOGIN_FAILURES:10}
+    login-lock-seconds: ${DISPLAY_LOGIN_LOCK_SECONDS:600}
+
   # C17 写真上传管理：P0 使用本地持久化目录 + 静态资源映射。
   photo-storage:
     upload-dir: ${PHOTO_UPLOAD_DIR:${user.home}/redface-uploads/photos}

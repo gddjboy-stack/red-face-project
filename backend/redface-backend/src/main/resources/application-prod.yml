@@ -16,3 +16,13 @@ spring:
 douyin:
   app-id: ${DOUYIN_APP_ID}
   app-secret: ${DOUYIN_APP_SECRET}
+
+# ------------------------------------------------------------
+# C20-5 大屏展示端生产覆盖
+# cookie-secure 在此固化为 true：生产必须走 HTTPS，展示 Cookie 不得在明文信道传输。
+# ProdSecurityGuard 会在启动时二次校验，若被环境变量强行改回 false 则拒绝启动。
+# DISPLAY_TOKEN 必须通过环境变量注入，且不得与 ADMIN_TOKEN 相同。
+# ------------------------------------------------------------
+redface:
+  display:
+    cookie-secure: true

@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>红颜局中局 · 人气榜大屏</title>
+<!--
+  任务卡 C20-5：人气榜大屏页（含一键生成分享图）
+
+  三条实现约束的落地说明：
+  1）不新建数据逻辑：仅调用 /api/display/board 与 /api/display/group-vote，
+     名次由后端 DisplayBoardService 算好并按序返回，本页**不做任何重排**。
+  2）零外部依赖：不引入 html2canvas / CDN 字体 / 框架。现场若断网或 CDN 被墙，
+     页面与出图功能仍完整可用。分享图用原生 Canvas 2D 手绘。
+  3）不可匿名访问：首屏为令牌闸门，换票成功后凭 HttpOnly Cookie 轮询；
+     令牌不写入 URL、不写入 localStorage，避免拍屏/截图/分享链接导致外泄。
+-->
+<style>
+  /* ---------- 设计基线 ----------
+     深色底 + 高对比大字，适配 OBS 采集与现场投屏。
+     金色 #d79a39 沿用小程序端品牌色（frontend/douyin-miniprogram/app.json），
+     但整体反相为深色，因为浅色底在直播画面里会过曝并压暗选手画面。
+     待彬少出正式模板规范后，只需替换本段 CSS 变量与 Canvas 绘制参数。 */
+  :root {
+    --bg: #0d0a10;
+    --bg-elevated: #17121b;
+    --gold: #d79a39;
+    --gold-bright: #f2c069;
+    --text: #f6f1f4;
+    --text-dim: #9b8f97;
+    --rank1: #f2c069;
+    --rank2: #cfd4dc;
+    --rank3: #c98a5e;
+    --danger: #e06a6a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ---------- 令牌闸门 ---------- */
+  #gate {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 30%, #241a26 0%, #0d0a10 70%);
+  }
+  .gate-card {
+    width: 420px; padding: 40px 36px;
+    background: var(--bg-elevated);
+    border: 1px solid rgba(215, 154, 57, 0.28);
+    border-radius: 14px;
+    text-align: center;
+  }
+  .gate-title { font-size: 22px; font-weight: 600; letter-spacing: 2px; color: var(--gold-bright); }
+  .gate-sub { margin-top: 10px; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
+  .gate-card input {
+    width: 100%; margin-top: 24px; padding: 13px 14px;
+    background: #0d0a10; color: var(--text);
+    border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px;
+    font-size: 16px; letter-spacing: 1px; text-align: center;
+  }
+  .gate-card input:focus { outline: none; border-color: var(--gold); }
+  .gate-card button {
+    width: 100%; margin-top: 16px; padding: 13px;
+    background: linear-gradient(90deg, #d79a39, #f2c069);
+    color: #2b1d08; border: none; border-radius: 8px;
+    font-size: 16px; font-weight: 600; letter-spacing: 4px; cursor: pointer;
+  }
+  .gate-card button:disabled { opacity: .55; cursor: not-allowed; }
+  #gateError { min-height: 20px; margin-top: 14px; font-size: 13px; color: var(--danger); }
+
+  /* ---------- 主舞台 ---------- */
+  #stage { display: none; height: 100%; flex-direction: column; padding: 28px 40px 20px; }
+  #stage.on { display: flex; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; flex: 0 0 auto; }
+  .brand { font-size: 15px; letter-spacing: 6px; color: var(--gold); }
+  .headline { margin-top: 6px; font-size: 40px; font-weight: 700; letter-spacing: 3px; }
+  .round-tag { font-size: 15px; color: var(--text-dim); letter-spacing: 1px; text-align: right; }
+  .page-tag { margin-top: 6px; font-size: 13px; color: var(--gold); letter-spacing: 1px; }
+  .live-dot {
+    display: inline-block; width: 9px; height: 9px; margin-right: 7px;
+    background: #46d17c; border-radius: 50%; vertical-align: middle;
+    animation: pulse 1.6s infinite;
+  }
+  .live-dot.idle { background: var(--text-dim); animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  /* 榜单区：flex:1 + overflow hidden，超出条目自动滚动，不出现浏览器滚动条（OBS 采集不能有滚动条） */
+  #boardWrap { flex: 1 1 auto; margin-top: 22px; overflow: hidden; position: relative; }
+  #board { transition: transform .6s ease; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 92px 1fr 190px 220px;
+    align-items: center;
+    height: 74px; margin-bottom: 10px; padding: 0 22px;
+    background: linear-gradient(90deg, rgba(255,255,255,.055), rgba(255,255,255,.015));
+    border-left: 4px solid transparent; border-radius: 8px;
+  }
+  .row.top1 { border-left-color: var(--rank1); background: linear-gradient(90deg, rgba(242,192,105,.16), rgba(255,255,255,.02)); }
+  .row.top2 { border-left-color: var(--rank2); }
+  .row.top3 { border-left-color: var(--rank3); }
+
+  .rank { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+  .row.top1 .rank { color: var(--rank1); }
+  .row.top2 .rank { color: var(--rank2); }
+  .row.top3 .rank { color: var(--rank3); }
+  .name { font-size: 30px; font-weight: 600; letter-spacing: 1px; }
+  .name .no { margin-right: 12px; font-size: 20px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .team { font-size: 19px; color: var(--text-dim); }
+  .value { font-size: 34px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; color: var(--gold-bright); }
+
+  .empty { padding: 90px 0; text-align: center; font-size: 22px; color: var(--text-dim); letter-spacing: 2px; }
+
+  footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding-top: 16px; }
+  .meta { font-size: 13px; color: var(--text-dim); letter-spacing: .5px; }
+  .meta .warn { color: var(--danger); }
+  .actions { display: flex; gap: 10px; }
+  .actions button {
+    padding: 9px 18px; font-size: 14px; cursor: pointer;
+    background: transparent; color: var(--gold);
+    border: 1px solid rgba(215,154,57,.5); border-radius: 6px;
+  }
+  .actions button.primary { background: var(--gold); color: #2b1d08; border-color: var(--gold); font-weight: 600; }
+  /* 出图与切换按钮不应进入直播画面：按 h 键可整条隐藏 */
+  footer.hidden .actions, footer.hidden .meta { visibility: hidden; }
+
+  /* ---------- 分享图预览层 ---------- */
+  #shareLayer {
+    position: fixed; inset: 0; z-index: 200; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(6, 4, 8, .93);
+  }
+  #shareLayer.on { display: flex; }
+  #shareCanvas { max-width: 62vw; max-height: 76vh; border: 1px solid rgba(215,154,57,.35); border-radius: 8px; }
+  .share-tip { margin-top: 16px; font-size: 13px; color: var(--text-dim); }
+  .share-actions { margin-top: 14px; display: flex; gap: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ========== 令牌闸门 ========== -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-title">红颜局中局 · 人气榜大屏</div>
+    <div class="gate-sub">
+      本页为内部展示端，需展示令牌方可访问。<br />
+      令牌由项目经理分发，验证后仅保存于浏览器安全 Cookie，<br />不会出现在网址中，可放心用于 OBS 采集。
+    </div>
+    <input id="tokenInput" type="password" placeholder="请输入展示令牌" autocomplete="off" />
+    <button id="gateBtn">进 入</button>
+    <div id="gateError"></div>
+  </div>
+</div>
+
+<!-- ========== 主舞台 ========== -->
+<div id="stage">
+  <header>
+    <div>
+      <div class="brand">RED FACE · POPULARITY BOARD</div>
+      <div class="headline" id="boardTitle">选手人气榜</div>
+    </div>
+    <div class="round-tag">
+      <span class="live-dot" id="liveDot"></span><span id="roundText">连接中…</span>
+      <div class="page-tag" id="pageTag"></div>
+    </div>
+  </header>
+
+  <div id="boardWrap"><div id="board"></div></div>
+
+  <footer id="footerBar">
+    <div class="meta">
+      <span id="updateText">—</span>
+      <span id="errText" class="warn"></span>
+    </div>
+    <div class="actions">
+      <button id="tabBtn">切到 团队榜</button>
+      <button id="shareBtn" class="primary">生成分享图</button>
+      <button id="fsBtn">全屏</button>
+    </div>
+  </footer>
+</div>
+
+<!-- ========== 分享图预览 ========== -->
+<div id="shareLayer">
+  <canvas id="shareCanvas" width="1080" height="1440"></canvas>
+  <div class="share-actions">
+    <button id="dlBtn" class="primary" style="padding:9px 18px;border-radius:6px;border:1px solid var(--gold);background:var(--gold);color:#2b1d08;font-weight:600;cursor:pointer;">下载图片</button>
+    <button id="closeShareBtn" style="padding:9px 18px;border-radius:6px;border:1px solid rgba(215,154,57,.5);background:transparent;color:var(--gold);cursor:pointer;">关闭</button>
+  </div>
+  <div class="share-tip">图片规格 1080 × 1440（3:4），适配微信群与图文投稿。右键亦可直接另存。</div>
+</div>
+
+<script>
+/* ============================================================
+   C20-5 大屏页脚本
+   ------------------------------------------------------------
+   数据来源：GET /api/display/board?tab=player|team
+   鉴权：POST /api/display-auth/session 换取 HttpOnly Cookie（credentials: same-origin）
+   顺序：后端已按规则排序并给出 rank，前端严格按数组顺序渲染，不做本地排序
+   ============================================================ */
+'use strict';
+
+var POLL_INTERVAL_MS = 3000;   // 任务卡要求 2~5 秒，取中值 3 秒
+var SCROLL_VISIBLE_ROWS = 8;   // 超过 8 条启用整屏轮播，避免出现滚动条
+var SCROLL_PAGE_MS = 6000;
+
+var state = {
+  tab: 'player',
+  items: [],
+  roundName: null,
+  liveStatus: 'idle',
+  scrollPage: 0,
+  failCount: 0
+};
+var pollTimer = null;
+var scrollTimer = null;
+
+/* ---------- DOM ---------- */
+var $ = function (id) { return document.getElementById(id); };
+
+/* ---------- 通用请求：401 一律回到闸门 ---------- */
+function apiGet(path) {
+  return fetch(path, {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: { 'Accept': 'application/json' }
+  }).then(function (res) {
+    if (res.status === 401) {
+      var err = new Error('UNAUTHORIZED');
+      err.unauthorized = true;
+      throw err;
+    }
+    if (!res.ok) { throw new Error('HTTP ' + res.status); }
+    return res.json();
+  }).then(function (body) {
+    if (body.code !== 0) { throw new Error(body.message || '接口返回异常'); }
+    return body.data;
+  });
+}
+
+/* ---------- 换票 ---------- */
+function submitToken() {
+  var token = $('tokenInput').value.trim();
+  if (!token) { $('gateError').textContent = '请输入展示令牌'; return; }
+  $('gateBtn').disabled = true;
+  $('gateError').textContent = '';
+
+  fetch('/api/display-auth/session', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: token })
+  }).then(function (res) {
+    return res.json().then(function (body) { return { status: res.status, body: body }; });
+  }).then(function (r) {
+    if (r.status === 200 && r.body.code === 0) {
+      // 令牌用后即从输入框与内存清除，不做任何持久化（防拍屏、防截图外泄）
+      $('tokenInput').value = '';
+      enterStage();
+      return;
+    }
+    if (r.status === 429) {
+      $('gateError').textContent = r.body.message || '尝试次数过多，请稍后再试';
+    } else {
+      $('gateError').textContent = r.body.message || '令牌错误';
+    }
+  }).catch(function () {
+    $('gateError').textContent = '无法连接服务端，请检查网络或服务状态';
+  }).then(function () {
+    $('gateBtn').disabled = false;
+  });
+}
+
+function enterStage() {
+  $('gate').style.display = 'none';
+  $('stage').classList.add('on');
+  startPolling();
+}
+
+function backToGate(message) {
+  stopPolling();
+  $('stage').classList.remove('on');
+  $('gate').style.display = 'flex';
+  $('gateError').textContent = message || '凭证已失效，请重新输入展示令牌';
+}
+
+/* ---------- 轮询 ---------- */
+function startPolling() {
+  fetchBoard();
+  if (pollTimer) { clearInterval(pollTimer); }
+  pollTimer = setInterval(fetchBoard, POLL_INTERVAL_MS);
+  if (scrollTimer) { clearInterval(scrollTimer); }
+  scrollTimer = setInterval(rollScroll, SCROLL_PAGE_MS);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  if (scrollTimer) { clearInterval(scrollTimer); scrollTimer = null; }
+}
+
+function fetchBoard() {
+  apiGet('/api/display/board?tab=' + encodeURIComponent(state.tab)).then(function (data) {
+    state.items = data.items || [];
+    state.roundName = data.roundName;
+    state.liveStatus = data.liveStatus;
+    state.failCount = 0;
+    $('errText').textContent = '';
+    render();
+  }).catch(function (e) {
+    if (e.unauthorized) { backToGate('凭证已失效或被撤销，请重新输入展示令牌'); return; }
+    // 单次失败不清屏：直播中瞬时抖动若导致榜面变空白，比显示略旧的数据更糟。
+    state.failCount += 1;
+    $('errText').textContent = ' · 数据刷新失败 ' + state.failCount + ' 次，画面为最近一次成功数据';
+  });
+}
+
+/* ---------- 渲染 ---------- */
+function render() {
+  $('boardTitle').textContent = state.tab === 'team' ? '团队人气榜' : '选手人气榜';
+  $('tabBtn').textContent = state.tab === 'team' ? '切到 选手榜' : '切到 团队榜';
+
+  var isLive = state.liveStatus === 'live';
+  $('liveDot').className = 'live-dot' + (isLive ? '' : ' idle');
+  $('roundText').textContent = isLive
+    ? (state.roundName || '进行中') + ' · 实时'
+    : '暂无进行中的轮次';
+
+  var board = $('board');
+  if (!state.items.length) {
+    board.innerHTML = '<div class="empty">暂无榜单数据</div>';
+    board.style.transform = 'translateY(0)';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < state.items.length; i++) {
+    var it = state.items[i];
+    var cls = it.rank === 1 ? ' top1' : (it.rank === 2 ? ' top2' : (it.rank === 3 ? ' top3' : ''));
+    var noHtml = (state.tab === 'team' || it.number === null || it.number === undefined)
+      ? ''
+      : '<span class="no">' + pad2(it.number) + '</span>';
+    html += '<div class="row' + cls + '">'
+          +   '<div class="rank">' + it.rank + '</div>'
+          +   '<div class="name">' + noHtml + esc(it.name || '—') + '</div>'
+          +   '<div class="team">' + (state.tab === 'team' ? '' : esc(it.teamName || '未分组')) + '</div>'
+          +   '<div class="value">' + fmt(it.value) + '</div>'
+          + '</div>';
+  }
+  board.innerHTML = html;
+
+  $('updateText').textContent = '每 ' + (POLL_INTERVAL_MS / 1000) + ' 秒自动刷新 · 最近更新 ' + nowText()
+    + ' · 共 ' + state.items.length + ' 条';
+
+  // 条目数量可能因淘汰而变少，需重算屏数并修正越界的当前页，
+  // 否则会停在一个已不存在的屏上，画面变空白。
+  var pages = Math.max(1, Math.ceil(state.items.length / SCROLL_VISIBLE_ROWS));
+  if (state.scrollPage >= pages) {
+    state.scrollPage = 0;
+    $('board').style.transform = 'translateY(0)';
+  }
+  updatePageTag(state.scrollPage + 1, pages);
+}
+
+/*
+ * 超出可见行数时整屏轮播，保证 OBS 画面内无滚动条。
+ *
+ * 关键修正（浏览器实测暴露）：不能用 page * VISIBLE_ROWS 算偏移量。
+ * 12 条 / 每屏 8 条时，末屏只剩 4 条，那样算会让画面下半部分全是空白。
+ * 直播画面出现大片空白比少显几条更难看，因此末屏改为「对齐底部」：
+ * 偏移量上限为 (total - VISIBLE_ROWS) 行，末屏会与前一屏部分重叠但画面全满。
+ */
+function rollScroll() {
+  var total = state.items.length;
+  if (total <= SCROLL_VISIBLE_ROWS) {
+    state.scrollPage = 0;
+    $('board').style.transform = 'translateY(0)';
+    updatePageTag(1, 1);
+    return;
+  }
+  var pages = Math.ceil(total / SCROLL_VISIBLE_ROWS);
+  state.scrollPage = (state.scrollPage + 1) % pages;
+
+  var rowH = 84; // 74px 行高 + 10px 间距
+  var maxOffsetRows = total - SCROLL_VISIBLE_ROWS;
+  var offsetRows = Math.min(state.scrollPage * SCROLL_VISIBLE_ROWS, maxOffsetRows);
+  $('board').style.transform = 'translateY(-' + (offsetRows * rowH) + 'px)';
+  updatePageTag(state.scrollPage + 1, pages);
+}
+
+function updatePageTag(cur, total) {
+  $('pageTag').textContent = total > 1 ? ('第 ' + cur + ' / ' + total + ' 屏') : '';
+}
+
+/* ---------- 分享图：原生 Canvas 手绘，零依赖 ---------- */
+function drawShareImage() {
+  var c = $('shareCanvas');
+  var ctx = c.getContext('2d');
+  var W = c.width, H = c.height;
+
+  // 背景
+  var grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#221826');
+  grad.addColorStop(0.55, '#120d15');
+  grad.addColorStop(1, '#0d0a10');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 顶部金线与标题区（logo 位预留：左上 120×120，待彬少提供后用 drawImage 填入）
+  ctx.fillStyle = '#d79a39';
+  ctx.fillRect(0, 0, W, 8);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#d79a39';
+  ctx.font = '500 30px "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.fillText('红 颜 局 中 局', W / 2, 108);
+
+  ctx.fillStyle = '#f6f1f4';
+  ctx.font = '700 76px "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.fillText(state.tab === 'team' ? '团队人气榜' : '选手人气榜', W / 2, 208);
+
+  ctx.fillStyle = '#9b8f97';
+  ctx.font = '400 30px "PingFang SC", "Microsoft YaHei", sans-serif';
+  var sub = (state.roundName ? state.roundName + ' · ' : '') + dateText();
+  ctx.fillText(sub, W / 2, 262);
+
+  // 榜单：出图固定取前 10 名，保证版式统一（任务卡要求"版式统一"）
+  var list = state.items.slice(0, 10);
+  var top = 320, rowH = 96, padX = 72;
+
+  if (!list.length) {
+    ctx.fillStyle = '#9b8f97';
+    ctx.font = '400 34px "PingFang SC", sans-serif';
+    ctx.fillText('暂无榜单数据', W / 2, top + 120);
+  }
+
+  for (var i = 0; i < list.length; i++) {
+    var it = list[i];
+    var y = top + i * rowH;
+
+    // 行底
+    ctx.fillStyle = it.rank === 1 ? 'rgba(242,192,105,0.14)' : 'rgba(255,255,255,0.045)';
+    roundRect(ctx, padX, y, W - padX * 2, rowH - 14, 10);
+    ctx.fill();
+
+    // 名次色条
+    ctx.fillStyle = it.rank === 1 ? '#f2c069' : (it.rank === 2 ? '#cfd4dc' : (it.rank === 3 ? '#c98a5e' : 'rgba(255,255,255,0.12)'));
+    ctx.fillRect(padX, y, 6, rowH - 14);
+
+    // 名次
+    ctx.textAlign = 'center';
+    ctx.fillStyle = it.rank === 1 ? '#f2c069' : (it.rank === 2 ? '#cfd4dc' : (it.rank === 3 ? '#c98a5e' : '#9b8f97'));
+    ctx.font = '700 44px "PingFang SC", sans-serif';
+    ctx.fillText(String(it.rank), padX + 62, y + 56);
+
+    // 姓名（含编号）
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f6f1f4';
+    ctx.font = '600 40px "PingFang SC", "Microsoft YaHei", sans-serif';
+    var nameText = (state.tab === 'team' || it.number === null || it.number === undefined)
+      ? (it.name || '—')
+      : pad2(it.number) + ' ' + (it.name || '—');
+    ctx.fillText(clip(ctx, nameText, 420), padX + 116, y + 54);
+
+    // 队名
+    if (state.tab !== 'team') {
+      ctx.fillStyle = '#9b8f97';
+      ctx.font = '400 26px "PingFang SC", sans-serif';
+      ctx.fillText(clip(ctx, it.teamName || '未分组', 200), padX + 556, y + 52);
+    }
+
+    // 人气值
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#f2c069';
+    ctx.font = '700 42px "PingFang SC", sans-serif';
+    ctx.fillText(fmt(it.value), W - padX - 22, y + 54);
+  }
+
+  // 页脚
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#6f6470';
+  ctx.font = '400 24px "PingFang SC", sans-serif';
+  ctx.fillText('数据来源：红颜局中局赛事系统 · 截图时间 ' + nowText(), W / 2, H - 56);
+  ctx.fillStyle = '#d79a39';
+  ctx.fillRect(0, H - 8, W, 8);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function clip(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) { return text; }
+  var s = text;
+  while (s.length > 1 && ctx.measureText(s + '…').width > maxWidth) { s = s.slice(0, -1); }
+  return s + '…';
+}
+
+function downloadShareImage() {
+  var c = $('shareCanvas');
+  var link = document.createElement('a');
+  link.download = '红颜局中局_' + (state.tab === 'team' ? '团队人气榜' : '选手人气榜') + '_' + fileStamp() + '.png';
+  link.href = c.toDataURL('image/png');
+  link.click();
+}
+
+/* ---------- 工具 ---------- */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
+function fmt(n) { return Number(n || 0).toLocaleString('zh-CN'); }
+function pad2(n) { return String(n).padStart(2, '0'); }
+function two(n) { return String(n).padStart(2, '0'); }
+function nowText() {
+  var d = new Date();
+  return two(d.getHours()) + ':' + two(d.getMinutes()) + ':' + two(d.getSeconds());
+}
+function dateText() {
+  var d = new Date();
+  return d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日 '
+       + two(d.getHours()) + ':' + two(d.getMinutes());
+}
+function fileStamp() {
+  var d = new Date();
+  return d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) + '_' + two(d.getHours()) + two(d.getMinutes());
+}
+
+/* ---------- 事件绑定 ---------- */
+$('gateBtn').addEventListener('click', submitToken);
+$('tokenInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') { submitToken(); } });
+
+$('tabBtn').addEventListener('click', function () {
+  state.tab = state.tab === 'team' ? 'player' : 'team';
+  state.scrollPage = 0;
+  $('board').style.transform = 'translateY(0)';
+  fetchBoard();
+});
+
+$('shareBtn').addEventListener('click', function () {
+  drawShareImage();
+  $('shareLayer').classList.add('on');
+});
+$('closeShareBtn').addEventListener('click', function () { $('shareLayer').classList.remove('on'); });
+$('dlBtn').addEventListener('click', downloadShareImage);
+
+$('fsBtn').addEventListener('click', function () {
+  if (document.fullscreenElement) { document.exitFullscreen(); }
+  else { document.documentElement.requestFullscreen(); }
+});
+
+// 按 h 隐藏/显示底部操作条：OBS 采集时按钮不应进入直播画面
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'h' || e.key === 'H') { $('footerBar').classList.toggle('hidden'); }
+  if (e.key === 'Escape') { $('shareLayer').classList.remove('on'); }
+});
+
+/* ---------- 启动：先探活，Cookie 仍有效则跳过闸门 ---------- */
+apiGet('/api/display/ping').then(function () {
+  enterStage();
+}).catch(function () {
+  $('gate').style.display = 'flex';
+  $('tokenInput').focus();
+});
+</script>
+</body>
+</html>
