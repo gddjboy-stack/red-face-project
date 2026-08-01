@@ -88,6 +88,10 @@ public class PopularityService {
             case "manual":
             case "refund":
             case "team_distribution":
+            // C20-4B: order 的换算（原价分 × 件数 × 10）在导入服务内完成，
+            // 因为原价来自 product_price_config 而非请求本身，引擎无法自行查表。
+            // 传入引擎时 rawValue 已是人气值，与 manual/token 同类处理。
+            case "order":
                 return rawValue; // 这些来源直接就是人气值
             // C20-3-FIX: group_vote 已移出人气账本（独立表 group_vote_ledger），人气引擎不再接受该来源
             default:

@@ -327,3 +327,51 @@ CREATE TABLE live_metric_watermark (
   updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (metric_type)
 ) ENGINE=InnoDB COMMENT='直播数据来源水位线-全场维度,新场次开播须校准';
+-- C20-4B: 商品单价配置表
+-- 背景：人气按「原价 × 件数」计算（John 2026-08-01 决策）。原价不从订单导出表反推，
+-- 因为「订单应付金额」已扣除运费/平台优惠/商家优惠/主播优惠，会让包邮与用券的订单人气缩水。
+-- 价格由我方自行定义，上架时（8/7）须同步录入本表，漏录则该商品订单无法换算人气。
+-- 单价以「分」存储，全链路整数运算，避免浮点误差（1元=1000人气值 → 1分=10人气值）。
+CREATE TABLE product_price_config (
+  merchant_code   VARCHAR(64) NOT NULL COMMENT '商家编码,即选手编号如P12(与players.display_code对应)',
+  product_name    VARCHAR(200) NOT NULL COMMENT '商品名称,仅供人工核对',
+  unit_price_cent BIGINT NOT NULL COMMENT '商品原价(分),如19.9元存1990',
+  status          VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT 'active/disabled',
+  operator_id     VARCHAR(64) NULL COMMENT '最近一次维护人',
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (merchant_code)
+) ENGINE=InnoDB COMMENT='商品原价配置-订单人气换算依据,上架时须同步录入';
+
+-- C20-4B: 订单销量流水账
+-- 独立于人气账本(沿用 C20-3-FIX「不同业务来源分表存储」原则)，存已处理订单明细。
+-- 幂等键取「子订单编号」而非主订单号：一个主订单含多个子订单(商品维度导出每子订单一行)。
+-- 有效性判定为「订单状态 + 售后状态」复合条件，不可用单列筛选——
+-- 官方明确「售后关闭不等于售后成功」，售后关闭的订单同样是有效订单。
+-- 入账门槛设在「支付完成」(John 2026-08-01 决策)：未支付完成不计人气，防下单不付款刷分。
+CREATE TABLE order_sales_ledger (
+  entry_id          BIGINT NOT NULL AUTO_INCREMENT,
+  sub_order_no      VARCHAR(64) NOT NULL COMMENT '子订单编号,幂等键',
+  main_order_no     VARCHAR(64) NULL COMMENT '主订单号,仅供人工追溯,会重复',
+  merchant_code     VARCHAR(64) NULL COMMENT '商家编码,选手归属键;为空则无法归属',
+  player_id         INT NULL COMMENT '解析出的选手,归属失败时为空',
+  quantity          INT NOT NULL DEFAULT 0 COMMENT '商品数量',
+  unit_price_cent   BIGINT NULL COMMENT '换算时采用的原价(分),快照留存',
+  popularity_value  BIGINT NOT NULL DEFAULT 0 COMMENT '本行折算人气值,无效订单为0',
+  order_status      VARCHAR(30) NULL COMMENT '订单状态原文',
+  aftersale_status  VARCHAR(30) NULL COMMENT '售后状态原文,空值已归一化',
+  validity          VARCHAR(20) NOT NULL COMMENT 'valid/invalid/unattributed',
+  invalid_reason    VARCHAR(200) NULL COMMENT '无效或未归属原因',
+  in_aftersale      TINYINT NOT NULL DEFAULT 0 COMMENT '1=售后中(计入有效但需单列显示风险敞口)',
+  paid_at           TIMESTAMP NULL COMMENT '支付完成时间,场次归属依据',
+  payable_amount_cent BIGINT NULL COMMENT '订单应付金额(分),仅作核对,不用于换算',
+  round_id          INT NULL COMMENT '入账轮次',
+  import_batch_id   VARCHAR(64) NOT NULL COMMENT '导入批次,同一文件一批',
+  operator_id       VARCHAR(64) NULL,
+  raw_row           JSON NULL COMMENT '原始行快照,供争议追溯',
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entry_id),
+  UNIQUE KEY uq_sub_order (sub_order_no),
+  KEY idx_osl_batch (import_batch_id),
+  KEY idx_osl_player (player_id, round_id)
+) ENGINE=InnoDB COMMENT='订单销量流水账-幂等键为子订单编号,人气效果另写popularity_ledger';

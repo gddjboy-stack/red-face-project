@@ -1,4 +1,6 @@
 -- H2 测试环境可能因不同 Spring 测试上下文重复初始化，先按外键反向顺序清理旧表。
+DROP TABLE IF EXISTS order_sales_ledger;
+DROP TABLE IF EXISTS product_price_config;
 DROP TABLE IF EXISTS live_metric_watermark;
 DROP TABLE IF EXISTS group_vote_ledger;
 DROP TABLE IF EXISTS user_session;
@@ -28,11 +30,15 @@ CREATE TABLE players (
   player_id   INT NOT NULL AUTO_INCREMENT,
   name        VARCHAR(100) NOT NULL,
   number      INT NOT NULL,
+  -- C20-4B 修复：此列此前只存在于 db/db_schema.sql（生产 MySQL），H2 测试库缺失，
+  -- 导致任何依赖选手编号的功能在测试环境根本跑不起来，而全量测试仍显示为绿。
+  display_code VARCHAR(20) NULL,
   status      VARCHAR(20) NOT NULL DEFAULT 'active',
   created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (player_id),
-  UNIQUE KEY uq_number (number)
+  UNIQUE KEY uq_number (number),
+  UNIQUE KEY uq_display_code (display_code)
 );
 
 CREATE TABLE teams (
@@ -338,4 +344,40 @@ CREATE TABLE live_metric_watermark (
   operator_id      VARCHAR(64) NULL,
   updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (metric_type)
+);
+CREATE TABLE product_price_config (
+  merchant_code   VARCHAR(64) NOT NULL,
+  product_name    VARCHAR(200) NOT NULL,
+  unit_price_cent BIGINT NOT NULL,
+  status          VARCHAR(20) NOT NULL DEFAULT 'active',
+  operator_id     VARCHAR(64) NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (merchant_code)
+);
+CREATE TABLE order_sales_ledger (
+  entry_id          BIGINT NOT NULL AUTO_INCREMENT,
+  sub_order_no      VARCHAR(64) NOT NULL,
+  main_order_no     VARCHAR(64) NULL,
+  merchant_code     VARCHAR(64) NULL,
+  player_id         INT NULL,
+  quantity          INT NOT NULL DEFAULT 0,
+  unit_price_cent   BIGINT NULL,
+  popularity_value  BIGINT NOT NULL DEFAULT 0,
+  order_status      VARCHAR(30) NULL,
+  aftersale_status  VARCHAR(30) NULL,
+  validity          VARCHAR(20) NOT NULL,
+  invalid_reason    VARCHAR(200) NULL,
+  in_aftersale      TINYINT NOT NULL DEFAULT 0,
+  paid_at           TIMESTAMP NULL,
+  payable_amount_cent BIGINT NULL,
+  round_id          INT NULL,
+  import_batch_id   VARCHAR(64) NOT NULL,
+  operator_id       VARCHAR(64) NULL,
+  raw_row           CLOB NULL,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entry_id),
+  UNIQUE KEY uq_sub_order (sub_order_no),
+  KEY idx_osl_batch (import_batch_id),
+  KEY idx_osl_player (player_id, round_id)
 );

@@ -7,14 +7,19 @@ import com.redface.service.CoefficientService;
 import com.redface.dto.DistributionResult;
 import com.redface.dto.GroupVoteSummaryResponse;
 import com.redface.dto.LiveHomeResponse;
+import com.redface.dto.OrderImportPreview;
 import com.redface.dto.PopularityBoardResponse;
 import com.redface.dto.PopularityChangeResult;
 import com.redface.dto.SimResult;
 import com.redface.entity.CollectState;
 import com.redface.entity.LiveMetricWatermark;
+import com.redface.entity.ProductPriceConfig;
 import com.redface.service.AdminControlService;
 import com.redface.service.LiveMetricEntryService;
 import com.redface.service.LiveWatermarkService;
+import com.redface.service.OrderImportService;
+import com.redface.service.ProductPriceService;
+import com.redface.util.SheetReader;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * C10 场控后台 Admin API。Controller 只做 HTTP 适配，业务逻辑全部委托 Service。
@@ -34,15 +40,21 @@ public class AdminControlController {
     private final CoefficientService coefficientService;
     private final LiveMetricEntryService liveMetricEntryService;
     private final LiveWatermarkService liveWatermarkService;
+    private final OrderImportService orderImportService;
+    private final ProductPriceService productPriceService;
 
     public AdminControlController(AdminControlService adminControlService,
                                   CoefficientService coefficientService,
                                   LiveMetricEntryService liveMetricEntryService,
-                                  LiveWatermarkService liveWatermarkService) {
+                                  LiveWatermarkService liveWatermarkService,
+                                  OrderImportService orderImportService,
+                                  ProductPriceService productPriceService) {
         this.adminControlService = adminControlService;
         this.coefficientService = coefficientService;
         this.liveMetricEntryService = liveMetricEntryService;
         this.liveWatermarkService = liveWatermarkService;
+        this.orderImportService = orderImportService;
+        this.productPriceService = productPriceService;
     }
 
     @GetMapping("/live/home")
@@ -183,5 +195,65 @@ public class AdminControlController {
             @RequestBody AdminRequests.WatermarkCalibrateRequest request) {
         return ApiResponse.success(
                 liveWatermarkService.revokeCalibration(request.getOperatorId(), request.getReason()));
+    }
+
+    /**
+     * C20-4B 上传订单表并预览，<b>不写库</b>。返回每位选手人气增量、
+     * 有效/无效/未归属/售后中分布，以及阻塞错误与警告，供运营核对后再确认入账。
+     */
+    @PostMapping("/orders/preview")
+    public ApiResponse<OrderImportPreview> previewOrderImport(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) Integer roundId) {
+        return ApiResponse.success(orderImportService.preview(readSheet(file), roundId));
+    }
+
+    /**
+     * C20-4B 凭预览令牌确认入账。令牌一次性消费，既防重复点击确认，
+     * 也防「看的是 A 文件、导的是 B 文件」。
+     */
+    @PostMapping("/orders/confirm")
+    public ApiResponse<Map<String, Object>> confirmOrderImport(
+            @RequestBody AdminRequests.OrderImportConfirmRequest request) {
+        return ApiResponse.success(
+                orderImportService.confirm(request.getPreviewToken(), request.getOperatorId()));
+    }
+
+    /** C20-4B 查询商品原价配置。 */
+    @GetMapping("/orders/prices")
+    public ApiResponse<List<ProductPriceConfig>> listProductPrices() {
+        return ApiResponse.success(productPriceService.list());
+    }
+
+    /**
+     * C20-4B 新增或修改商品原价。改价只影响<b>此后导入</b>的订单，
+     * 已入账订单不追溯，因此每次改价均写操作日志留痕。
+     */
+    @PostMapping("/orders/prices")
+    public ApiResponse<ProductPriceConfig> saveProductPrice(
+            @RequestBody AdminRequests.ProductPriceRequest request) {
+        return ApiResponse.success(productPriceService.save(
+                request.getMerchantCode(), request.getProductName(), request.getUnitPriceYuan(),
+                request.getStatus(), request.getOperatorId()));
+    }
+
+    /**
+     * 读取上传的 CSV/Excel 为二维字符串。全部单元格按文本读取，避免子订单号
+     * 这类长数字被当成数值转为科学计数法而丢掉末位。
+     */
+    private List<List<String>> readSheet(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("请选择要导入的订单表文件");
+        }
+        String name = file.getOriginalFilename() == null
+                ? "" : file.getOriginalFilename().toLowerCase();
+        try {
+            if (name.endsWith(".csv") || name.endsWith(".txt")) {
+                return SheetReader.readCsv(file.getInputStream());
+            }
+            return SheetReader.readExcel(file.getInputStream());
+        } catch (java.io.IOException e) {
+            throw new IllegalArgumentException("文件读取失败：" + e.getMessage());
+        }
     }
 }

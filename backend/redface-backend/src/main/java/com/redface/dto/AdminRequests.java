@@ -166,4 +166,38 @@ public final class AdminRequests {
         public String getReason() { return reason; }
         public void setReason(String reason) { this.reason = reason; }
     }
+
+    /**
+     * C20-4B 确认导入订单。必须回传预览令牌，防止「看的是 A 文件、导的是 B 文件」。
+     */
+    public static class OrderImportConfirmRequest {
+        private String previewToken;
+        private String operatorId;
+        public String getPreviewToken() { return previewToken; }
+        public void setPreviewToken(String previewToken) { this.previewToken = previewToken; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+    }
+
+    /**
+     * C20-4B 商品原价配置。单价以「元」提交（如 19.9），服务层转成「分」存储，
+     * 全链路整数运算避免浮点误差。
+     */
+    public static class ProductPriceRequest {
+        private String merchantCode;
+        private String productName;
+        private String unitPriceYuan;
+        private String status;
+        private String operatorId;
+        public String getMerchantCode() { return merchantCode; }
+        public void setMerchantCode(String merchantCode) { this.merchantCode = merchantCode; }
+        public String getProductName() { return productName; }
+        public void setProductName(String productName) { this.productName = productName; }
+        public String getUnitPriceYuan() { return unitPriceYuan; }
+        public void setUnitPriceYuan(String unitPriceYuan) { this.unitPriceYuan = unitPriceYuan; }
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+    }
 }

@@ -56,6 +56,12 @@
 			<version>3.0.3</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- C20-4B 订单表导入：运营从抖店导出的是 xlsx，不能要求现场先另存 CSV -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.5</version>
+		</dependency>
 	</dependencies>
 
 	<build>
