@@ -1,4 +1,5 @@
 -- H2 测试环境可能因不同 Spring 测试上下文重复初始化，先按外键反向顺序清理旧表。
+DROP TABLE IF EXISTS live_metric_watermark;
 DROP TABLE IF EXISTS group_vote_ledger;
 DROP TABLE IF EXISTS user_session;
 DROP TABLE IF EXISTS suspicion_votes;
@@ -324,4 +325,17 @@ CREATE TABLE group_vote_ledger (
   PRIMARY KEY (entry_id),
   UNIQUE KEY uq_gv_idem (idempotency_key),
   KEY idx_gv_round_player (round_id, player_id)
+);
+
+CREATE TABLE live_metric_watermark (
+  metric_type      VARCHAR(30) NOT NULL,
+  last_total       BIGINT NOT NULL DEFAULT 0,
+  session_seq      VARCHAR(40) NOT NULL,
+  prev_total       BIGINT NULL,
+  prev_session_seq VARCHAR(40) NULL,
+  calibrated_at    TIMESTAMP NULL,
+  entry_count      INT NOT NULL DEFAULT 0,
+  operator_id      VARCHAR(64) NULL,
+  updated_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (metric_type)
 );

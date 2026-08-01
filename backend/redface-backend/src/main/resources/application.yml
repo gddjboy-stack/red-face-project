@@ -67,6 +67,16 @@ redface:
     max-login-failures: ${DISPLAY_MAX_LOGIN_FAILURES:10}
     login-lock-seconds: ${DISPLAY_LOGIN_LOCK_SECONDS:600}
 
+  # C20-4A 直播数据录入。
+  # 抖音官方直播中控台只提供「本场直播」的累计数，不提供跨场次历史累计，
+  # 每场开播从 0 重新计数；因此录入的是「当前累计总数」，系统减去水位线得到本次增量。
+  live:
+    # 礼物是否纳入水位线（即录入中控台礼物累计总数并按当前场控目标归属）。
+    # 默认 false = 保持原有的逐笔入账、显式归属选手。
+    # 该开关对应一个待裁定事项：中控台礼物累计数不区分选手，改为填总数后
+    # 归属完全依赖运营及时切换场控目标，切慢就会归错人，属赛制精度问题。
+    gift-watermark-enabled: ${GIFT_WATERMARK_ENABLED:false}
+
   # C17 写真上传管理：P0 使用本地持久化目录 + 静态资源映射。
   photo-storage:
     upload-dir: ${PHOTO_UPLOAD_DIR:${user.home}/redface-uploads/photos}

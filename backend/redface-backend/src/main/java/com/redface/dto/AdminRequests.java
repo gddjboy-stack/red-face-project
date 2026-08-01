@@ -132,4 +132,38 @@ public final class AdminRequests {
         public String getIdempotencyKey() { return idempotencyKey; }
         public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
     }
+
+    /**
+     * C20-4A 直播互动数据录入请求。currentTotal 为「中控台当前累计总数」而非增量，
+     * 增量由系统减去水位线计算，避免运营手算出错且无从校验。
+     */
+    public static class LiveMetricEntryRequest {
+        private String metricType;
+        private Long currentTotal;
+        private String operatorId;
+        private String reason;
+        private String idempotencyKey;
+        public String getMetricType() { return metricType; }
+        public void setMetricType(String metricType) { this.metricType = metricType; }
+        public Long getCurrentTotal() { return currentTotal; }
+        public void setCurrentTotal(Long currentTotal) { this.currentTotal = currentTotal; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+        public String getIdempotencyKey() { return idempotencyKey; }
+        public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+    }
+
+    /**
+     * C20-4A 水位线校准/撤销校准请求。校准只重置中控台读数基准，不改变任何选手人气值。
+     */
+    public static class WatermarkCalibrateRequest {
+        private String operatorId;
+        private String reason;
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
 }

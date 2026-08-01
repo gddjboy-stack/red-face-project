@@ -11,7 +11,11 @@ import com.redface.dto.PopularityBoardResponse;
 import com.redface.dto.PopularityChangeResult;
 import com.redface.dto.SimResult;
 import com.redface.entity.CollectState;
+import com.redface.entity.LiveMetricWatermark;
 import com.redface.service.AdminControlService;
+import com.redface.service.LiveMetricEntryService;
+import com.redface.service.LiveWatermarkService;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,10 +31,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminControlController {
     private final AdminControlService adminControlService;
     private final CoefficientService coefficientService;
+    private final LiveMetricEntryService liveMetricEntryService;
+    private final LiveWatermarkService liveWatermarkService;
 
-    public AdminControlController(AdminControlService adminControlService, CoefficientService coefficientService) {
+    public AdminControlController(AdminControlService adminControlService,
+                                  CoefficientService coefficientService,
+                                  LiveMetricEntryService liveMetricEntryService,
+                                  LiveWatermarkService liveWatermarkService) {
         this.adminControlService = adminControlService;
         this.coefficientService = coefficientService;
+        this.liveMetricEntryService = liveMetricEntryService;
+        this.liveWatermarkService = liveWatermarkService;
     }
 
     @GetMapping("/live/home")
@@ -96,5 +107,64 @@ public class AdminControlController {
     @GetMapping("/group-vote/summary")
     public ApiResponse<GroupVoteSummaryResponse> getGroupVoteSummary(@RequestParam int roundId) {
         return ApiResponse.success(adminControlService.getGroupVoteSummary(roundId));
+    }
+
+    /**
+     * C20-4A 查询三条数据来源的水位线现状，供后台展示「上次录入总数」以便运营核对。
+     */
+    @GetMapping("/live/watermarks")
+    public ApiResponse<List<LiveMetricWatermark>> listWatermarks() {
+        return ApiResponse.success(liveWatermarkService.listAll());
+    }
+
+    /**
+     * C20-4A 预演一次录入，返回将要入账的增量或「需先校准」信号。不写入任何数据。
+     */
+    @GetMapping("/live/metric-entry/preview")
+    public ApiResponse<LiveWatermarkService.EntryPreview> previewMetricEntry(
+            @RequestParam String metricType,
+            @RequestParam long currentTotal) {
+        return ApiResponse.success(liveMetricEntryService.preview(metricType, currentTotal));
+    }
+
+    /**
+     * C20-4A 按「中控台当前累计总数」录入互动数据。系统减去水位线得到增量后入账。
+     *
+     * <p>当前总数小于水位线时不写入任何数据，返回 40910 要求前端确认是否为新场次开播。
+     */
+    @PostMapping("/live/metric-entry")
+    public ApiResponse<LiveMetricEntryService.EntryOutcome> submitMetricEntry(
+            @RequestBody AdminRequests.LiveMetricEntryRequest request) {
+        if (request.getCurrentTotal() == null) {
+            throw new IllegalArgumentException("currentTotal不能为空");
+        }
+        return ApiResponse.success(liveMetricEntryService.submit(
+                request.getMetricType(), request.getCurrentTotal(), request.getOperatorId(),
+                request.getIdempotencyKey(), request.getReason()));
+    }
+
+    /**
+     * C20-4A 校准全部来源水位线，用于新一场直播开播。
+     *
+     * <p>本操作只重置中控台读数基准，<b>不会改变任何选手的人气值</b>。前端二次确认
+     * 文案必须写明这一点，否则运营可能把它理解为「分数清零」，在发现分数没变时
+     * 误判系统故障并手动调分「修正」，造成系统层面无法拦截的数据污染。
+     */
+    @PostMapping("/live/watermarks/calibrate")
+    public ApiResponse<LiveWatermarkService.CalibrationResult> calibrateWatermarks(
+            @RequestBody AdminRequests.WatermarkCalibrateRequest request) {
+        return ApiResponse.success(
+                liveWatermarkService.calibrate(request.getOperatorId(), request.getReason()));
+    }
+
+    /**
+     * C20-4A 撤销最近一次校准。用于误点校准的挽回——误点的后果是「多加」而非倒扣，
+     * 负值兜底对该方向完全无效，因此必须提供撤销。仅在校准后尚未录入时可用。
+     */
+    @PostMapping("/live/watermarks/revoke-calibration")
+    public ApiResponse<LiveWatermarkService.RevokeResult> revokeCalibration(
+            @RequestBody AdminRequests.WatermarkCalibrateRequest request) {
+        return ApiResponse.success(
+                liveWatermarkService.revokeCalibration(request.getOperatorId(), request.getReason()));
     }
 }

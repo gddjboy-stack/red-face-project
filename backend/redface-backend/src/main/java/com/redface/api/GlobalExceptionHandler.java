@@ -1,5 +1,6 @@
 package com.redface.api;
 
+import com.redface.service.LiveMetricEntryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNoResource(NoResourceFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(40400, "请求的资源不存在", null));
+    }
+
+    /**
+     * C20-4A 录入的当前总数小于水位线，需运营确认是否为新场次开播。
+     *
+     * <p>用 409 而非 400 表达：这不是「参数写错了」，而是「系统状态与提交内容不一致，
+     * 需要人来判断」。此时<b>未写入任何数据</b>，人气值不受影响。
+     * 响应 data 携带预演结果，供前端渲染确认弹窗时展示当前总数与上次记录的差异。
+     */
+    @ExceptionHandler(LiveMetricEntryService.WatermarkCalibrationRequiredException.class)
+    public ResponseEntity<ApiResponse<Object>> handleCalibrationRequired(
+            LiveMetricEntryService.WatermarkCalibrationRequiredException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(40910, e.getMessage(), e.getPreview()));
     }
 
     @ExceptionHandler(Exception.class)

@@ -308,3 +308,22 @@ CREATE TABLE group_vote_ledger (
   UNIQUE KEY uq_gv_idem (idempotency_key),
   KEY idx_gv_round_player (round_id, player_id)
 ) ENGINE=InnoDB COMMENT='群投票流水账-独立于人气账本,只用于卧底胜负判定';
+
+-- C20-4A: 直播数据来源水位线
+-- 背景：抖音官方直播中控台只提供「本场直播」的点赞/评论/礼物实时累计数，
+-- 不提供跨场次历史累计。每场开播时中控台三个数字都从 0 重新开始。
+-- 因此运营录入的是「当前累计总数」，系统需减去上次水位线得到本次增量。
+-- 水位线按数据来源维护（全场维度，与选手无关），新场次开播时须校准（归零）。
+-- 注意：不建「场次」实体，session_seq 仅为分段标识，写入流水 metadata 用于还原每段计数周期。
+CREATE TABLE live_metric_watermark (
+  metric_type     VARCHAR(30) NOT NULL COMMENT '数据来源:gift/like_delta/comment_delta',
+  last_total      BIGINT NOT NULL DEFAULT 0 COMMENT '上次录入的中控台累计总数',
+  session_seq     VARCHAR(40) NOT NULL COMMENT '当前计数周期标识,校准时更新',
+  prev_total      BIGINT NULL COMMENT '最近一次校准前的水位线原值,供撤销与人工冲销核算',
+  prev_session_seq VARCHAR(40) NULL COMMENT '最近一次校准前的周期标识,供撤销恢复',
+  calibrated_at   TIMESTAMP NULL COMMENT '最近一次校准时间',
+  entry_count     INT NOT NULL DEFAULT 0 COMMENT '当前周期内已录入次数,为0时允许撤销校准',
+  operator_id     VARCHAR(64) NULL COMMENT '最近一次操作人',
+  updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (metric_type)
+) ENGINE=InnoDB COMMENT='直播数据来源水位线-全场维度,新场次开播须校准';
