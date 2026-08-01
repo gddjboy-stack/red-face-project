@@ -56,6 +56,7 @@
     border-radius: 14px;
     text-align: center;
   }
+  .gate-logo { width: 190px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 3px 12px rgba(0,0,0,.5)); }
   .gate-title { font-size: 22px; font-weight: 600; letter-spacing: 2px; color: var(--gold-bright); }
   .gate-sub { margin-top: 10px; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
   .gate-card input {
@@ -79,6 +80,10 @@
   #stage.on { display: flex; }
 
   header { display: flex; align-items: flex-end; justify-content: space-between; flex: 0 0 auto; }
+  /* logo 为白底圆角卡片（原始 logo 依赖白色描边，纯透明抠图会让描边消失，实测已否决）。
+     用 drop-shadow 让卡片与深色背景之间有过渡，避免生硬贴片感。 */
+  .title-group { display: flex; align-items: center; gap: 18px; }
+  .logo-mark { height: 62px; width: auto; filter: drop-shadow(0 3px 10px rgba(0,0,0,.55)); }
   .brand { font-size: 15px; letter-spacing: 6px; color: var(--gold); }
   .headline { margin-top: 6px; font-size: 40px; font-weight: 700; letter-spacing: 3px; }
   .round-tag { font-size: 15px; color: var(--text-dim); letter-spacing: 1px; text-align: right; }
@@ -148,7 +153,8 @@
 <!-- ========== 令牌闸门 ========== -->
 <div id="gate">
   <div class="gate-card">
-    <div class="gate-title">红颜局中局 · 人气榜大屏</div>
+    <img class="gate-logo" src="assets/logo-220.png" alt="红颜局中局" />
+    <div class="gate-title">人气榜大屏</div>
     <div class="gate-sub">
       本页为内部展示端，需展示令牌方可访问。<br />
       令牌由项目经理分发，验证后仅保存于浏览器安全 Cookie，<br />不会出现在网址中，可放心用于 OBS 采集。
@@ -162,9 +168,12 @@
 <!-- ========== 主舞台 ========== -->
 <div id="stage">
   <header>
-    <div>
-      <div class="brand">RED FACE · POPULARITY BOARD</div>
-      <div class="headline" id="boardTitle">选手人气榜</div>
+    <div class="title-group">
+      <img class="logo-mark" src="assets/logo-160.png" alt="红颜局中局" />
+      <div>
+        <div class="brand">RED FACE · POPULARITY BOARD</div>
+        <div class="headline" id="boardTitle">选手人气榜</div>
+      </div>
     </div>
     <div class="round-tag">
       <span class="live-dot" id="liveDot"></span><span id="roundText">连接中…</span>
@@ -399,6 +408,11 @@ function updatePageTag(cur, total) {
 }
 
 /* ---------- 分享图：原生 Canvas 手绘，零依赖 ---------- */
+// 预加载 logo：Canvas 的 drawImage 要求图片已完成加载，不能等到点击时才取。
+// 页面加载即开始拉取，到运营点「生成分享图」时早已就绪。
+var shareLogo = new Image();
+shareLogo.src = 'assets/logo-220.png';
+
 function drawShareImage() {
   var c = $('shareCanvas');
   var ctx = c.getContext('2d');
@@ -412,27 +426,40 @@ function drawShareImage() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // 顶部金线与标题区（logo 位预留：左上 120×120，待彬少提供后用 drawImage 填入）
+  // 顶部金线
   ctx.fillStyle = '#d79a39';
   ctx.fillRect(0, 0, W, 8);
 
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#d79a39';
-  ctx.font = '500 30px "PingFang SC", "Microsoft YaHei", sans-serif';
-  ctx.fillText('红 颜 局 中 局', W / 2, 108);
+  // 项目 logo：居中置顶。使用已缓存的图片对象，未加载完成时降级为文字标题——
+  // 分享图是对外物料，宁可少一个 logo 也不能出一张标题缺失的图。
+  // 尺寸经过版式核算：logo 240 宽（高 ~174）下，第 10 行底部距页脚尚有余量；
+  // 若改回 300 宽会使第 10 名压在页脚文字上，勿调大。
+  var logoBottom = 96;
+  if (shareLogo && shareLogo.complete && shareLogo.naturalWidth > 0) {
+    var lw = 240;
+    var lh = lw * shareLogo.naturalHeight / shareLogo.naturalWidth;
+    ctx.drawImage(shareLogo, (W - lw) / 2, 40, lw, lh);
+    logoBottom = 40 + lh;
+  } else {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#d79a39';
+    ctx.font = '500 30px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText('红 颜 局 中 局', W / 2, 108);
+  }
 
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#f6f1f4';
   ctx.font = '700 76px "PingFang SC", "Microsoft YaHei", sans-serif';
-  ctx.fillText(state.tab === 'team' ? '团队人气榜' : '选手人气榜', W / 2, 208);
+  ctx.fillText(state.tab === 'team' ? '团队人气榜' : '选手人气榜', W / 2, logoBottom + 66);
 
   ctx.fillStyle = '#9b8f97';
   ctx.font = '400 30px "PingFang SC", "Microsoft YaHei", sans-serif';
   var sub = (state.roundName ? state.roundName + ' · ' : '') + dateText();
-  ctx.fillText(sub, W / 2, 262);
+  ctx.fillText(sub, W / 2, logoBottom + 114);
 
   // 榜单：出图固定取前 10 名，保证版式统一（任务卡要求"版式统一"）
   var list = state.items.slice(0, 10);
-  var top = 320, rowH = 96, padX = 72;
+  var top = logoBottom + 150, rowH = 96, padX = 72;
 
   if (!list.length) {
     ctx.fillStyle = '#9b8f97';

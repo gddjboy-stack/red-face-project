@@ -204,12 +204,41 @@ class LiveWatermarkC20Test extends C9MockMvcSupport {
     }
 
     @Test
-    @DisplayName("礼物开关默认关闭，按总数录入被明确拒绝而非静默降级")
-    void giftEntryShouldBeRejectedWhenSwitchDisabled() throws Exception {
-        submitEntry("gift", 100, "k1")
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(
-                        org.hamcrest.Matchers.containsString("gift-watermark-enabled")));
+    @DisplayName("R-2：礼物已纳入水位线，按当前场控目标归属并只计增量")
+    void giftEntryShouldUseWatermarkAndAttributeToCollectTarget() throws Exception {
+        submitEntry("gift", 100, "g1")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.delta").value(100));
+        submitEntry("gift", 260, "g2")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.delta").value(160));
+
+        assertThat(watermarkOf("gift")).isEqualTo(260L);
+    }
+
+    @Test
+    @DisplayName("R-2：本场未录入过礼物时切换场控目标应提示归属风险")
+    void switchingTargetShouldWarnAboutGiftAttribution() throws Exception {
+        mockMvc.perform(post("/api/admin/collect-state")
+                        .contentType("application/json")
+                        .content("{\"mode\":\"player\",\"targetId\":101,\"roundId\":1,"
+                                + "\"operatorId\":\"director\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.message").value(
+                        org.hamcrest.Matchers.containsString("归到下一位选手")));
+    }
+
+    @Test
+    @DisplayName("R-2：刚录入过礼物后切换场控目标不再提示，避免告警疲劳")
+    void switchingTargetShouldNotWarnRightAfterEntry() throws Exception {
+        submitEntry("gift", 100, "g3").andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/admin/collect-state")
+                        .contentType("application/json")
+                        .content("{\"mode\":\"player\",\"targetId\":101,\"roundId\":1,"
+                                + "\"operatorId\":\"director\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.message").value("场控目标已切换"));
     }
 
     @Test

@@ -39,6 +39,7 @@ public class AdminControlService {
     private final OperationsLogMapper operationsLogMapper;
     private final PopularityLedgerMapper popularityLedgerMapper;
     private final GroupVoteLedgerMapper groupVoteLedgerMapper;
+    private final LiveWatermarkService liveWatermarkService;
 
     public AdminControlService(CollectStateService collectStateService,
                                LiveDataService liveDataService,
@@ -48,7 +49,8 @@ public class AdminControlService {
                                PopularityBoardService popularityBoardService,
                                OperationsLogMapper operationsLogMapper,
                                PopularityLedgerMapper popularityLedgerMapper,
-                               GroupVoteLedgerMapper groupVoteLedgerMapper) {
+                               GroupVoteLedgerMapper groupVoteLedgerMapper,
+                               LiveWatermarkService liveWatermarkService) {
         this.collectStateService = collectStateService;
         this.liveDataService = liveDataService;
         this.popularityService = popularityService;
@@ -58,6 +60,7 @@ public class AdminControlService {
         this.operationsLogMapper = operationsLogMapper;
         this.popularityLedgerMapper = popularityLedgerMapper;
         this.groupVoteLedgerMapper = groupVoteLedgerMapper;
+        this.liveWatermarkService = liveWatermarkService;
     }
 
     public LiveHomeResponse getLiveHome() {
@@ -75,8 +78,12 @@ public class AdminControlService {
     @Transactional
     public AdminOperationResult<Void> setCollectTarget(AdminRequests.CollectStateRequest request) {
         validateOperator(request.getOperatorId());
+        // 先取提示再切换：该提示描述的是「切换前未录入的那段」的风险。
+        // R-2 采用礼物按场控目标归属后，漏做「切换前先录一次数」会直接导致归属错人。
+        String warning = liveWatermarkService.buildTargetSwitchWarning();
         collectStateService.setCollectTarget(request.getMode(), request.getTargetId(), request.getRoundId(), request.getOperatorId());
-        return AdminOperationResult.of("set_collect_target", "场控目标已切换", null);
+        String message = warning == null ? "场控目标已切换" : "场控目标已切换。注意：" + warning;
+        return AdminOperationResult.of("set_collect_target", message, null);
     }
 
     @Transactional

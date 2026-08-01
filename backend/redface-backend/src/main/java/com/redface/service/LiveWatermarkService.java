@@ -191,6 +191,40 @@ public class LiveWatermarkService {
     }
 
     /**
+     * 切换场控目标前检查是否有尚未录入的直播数据，返回人工可读的风险提示。
+     *
+     * <p><b>为何需要这一层</b>：Claude 裁定 R-2 采用「礼物按场控目标归属」后，
+     * 「换场控目标前先录一次数」从一个普通操作升级为<b>决定归属正确性的关键动作</b>：
+     * 若漏做，上一位选手在台时收到的礼物会整段归到下一位选手头上。
+     * 裁定把这一条交给《运营执行手册》，但直播现场靠记忆执行纪律不可靠，
+     * 因此在系统层面给出提示。注意：这里只能提示「自上次录入后已过了多久」，
+     * <b>无法得知中控台真实增量</b>——因为数据靠人工录入，系统看不到未录入的部分。
+     * 这是人工录入模式的固有上限，不应对该提示产生超出其能力的信赖。
+     *
+     * @return 风险提示文案；无需提醒时返回 null
+     */
+    public String buildTargetSwitchWarning() {
+        LiveMetricWatermark gift = requireWatermark(METRIC_GIFT);
+        // 判定依据必须是 entry_count（本计数周期内是否发生过录入），不能用 updated_at：
+        // 该列 NOT NULL DEFAULT CURRENT_TIMESTAMP，惰性初始化时就被填上当前时间，永远不为空，
+        // 且会被校准等非录入操作刷新，本身就不是「上次录入时间」的可靠代理。
+        // 若错用 updated_at，最该提示的场景（一次都没录过）恰好变成唯一不提示的场景。
+        if (gift.getEntryCount() == 0) {
+            return "本场尚未录入过礼物数据。若切换前已有礼物进入，请先录入一次再切换，"
+                    + "否则这段礼物会整段归到下一位选手头上。";
+        }
+        if (gift.getUpdatedAt() == null) {
+            return null;
+        }
+        long minutes = java.time.Duration.between(gift.getUpdatedAt(), LocalDateTime.now()).toMinutes();
+        if (minutes >= 3) {
+            return "礼物数据已有 " + minutes + " 分钟未录入。建议先录入一次再切换场控目标，"
+                    + "否则这段时间的礼物会整段归到下一位选手头上。";
+        }
+        return null;
+    }
+
+    /**
      * 读取指定来源当前的计数周期标识，用于写入人气流水 metadata 实现分段还原。
      *
      * @param metricType 数据来源
