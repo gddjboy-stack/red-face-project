@@ -51,6 +51,32 @@ public class LiveWatermarkService {
     private static final DateTimeFormatter SESSION_SEQ_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     /**
+     * 校准成功提示。Claude 裁定 V3.1 批准的固定文案，由后端统一下发而非前端硬编码。
+     *
+     * <p><b>为何由后端下发</b>：这不是普通提示语，而是<b>防误操作的安全文案</b>。运营会把
+     * 「清零」理解为「分数清零」，在发现选手分数未变时判定系统故障，进而手动调分「修正」；
+     * 手动调分本身是合法操作，系统无法识别该污染。文案集中在后端可保证中控台、大屏及
+     * 任何后续新增客户端表述完全一致，不会因某一端漏改而复活该风险。
+     */
+    public static final String CALIBRATION_SUCCESS_MESSAGE =
+            "读数基准已校准，请从中控台读取当前数字录入。本次操作未改变任何选手的人气值。";
+
+    /** 撤销校准成功提示。同样由后端统一下发，理由见 {@link #CALIBRATION_SUCCESS_MESSAGE}。 */
+    public static final String REVOKE_SUCCESS_MESSAGE =
+            "上一次校准已撤销，读数基准已恢复。本次操作未改变任何选手的人气值。";
+
+    /**
+     * 校准操作的按钮文案与二次确认文案。前端须直接引用，不得自行改写。
+     *
+     * <p>按钮刻意不含「清零」二字：该词会被理解为分数清零。
+     */
+    public static final String CALIBRATION_ACTION_LABEL = "开始新一场直播（校准中控台读数）";
+
+    /** 校准二次确认文案。必须明写不改变人气值，否则等于没有防护。 */
+    public static final String CALIBRATION_CONFIRM_MESSAGE =
+            "此操作只重置中控台读数基准，不会改变任何选手的人气值。确认开始新一场直播的计数吗？";
+
+    /**
      * 生成计数周期标识。时间戳后拼 4 位随机后缀保证唯一。
      *
      * <p><b>为何不能只用秒级时间戳</b>：现场断流重连时，运营极可能在几秒内
@@ -144,7 +170,7 @@ public class LiveWatermarkService {
         }
         operationsLogMapper.insert(operatorId, "live_watermark_calibrate", "all_metrics",
                 buildCalibrationDetail(sessionSeq, previousTotals), reason);
-        return new CalibrationResult(sessionSeq, previousTotals);
+        return new CalibrationResult(sessionSeq, previousTotals, CALIBRATION_SUCCESS_MESSAGE);
     }
 
     /**
@@ -187,7 +213,7 @@ public class LiveWatermarkService {
         }
         operationsLogMapper.insert(operatorId, "live_watermark_revoke_calibration", "all_metrics",
                 buildRevokeDetail(restoredTotals), reason);
-        return new RevokeResult(restoredTotals);
+        return new RevokeResult(restoredTotals, REVOKE_SUCCESS_MESSAGE);
     }
 
     /**
@@ -341,15 +367,19 @@ public class LiveWatermarkService {
      *
      * @param sessionSeq     新的计数周期标识
      * @param previousTotals 各来源归零前的水位线原值
+     * @param message        面向运营的成功提示，固定为 {@link #CALIBRATION_SUCCESS_MESSAGE}
      */
-    public record CalibrationResult(String sessionSeq, Map<String, Long> previousTotals) {
+    public record CalibrationResult(String sessionSeq,
+                                    Map<String, Long> previousTotals,
+                                    String message) {
     }
 
     /**
      * 撤销校准结果。
      *
      * @param restoredTotals 各来源恢复后的水位线值
+     * @param message        面向运营的成功提示，固定为 {@link #REVOKE_SUCCESS_MESSAGE}
      */
-    public record RevokeResult(Map<String, Long> restoredTotals) {
+    public record RevokeResult(Map<String, Long> restoredTotals, String message) {
     }
 }

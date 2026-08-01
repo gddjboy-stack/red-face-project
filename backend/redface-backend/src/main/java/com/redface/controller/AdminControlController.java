@@ -16,6 +16,7 @@ import com.redface.service.AdminControlService;
 import com.redface.service.LiveMetricEntryService;
 import com.redface.service.LiveWatermarkService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -115,6 +116,22 @@ public class AdminControlController {
     @GetMapping("/live/watermarks")
     public ApiResponse<List<LiveMetricWatermark>> listWatermarks() {
         return ApiResponse.success(liveWatermarkService.listAll());
+    }
+
+    /**
+     * C20-4A 下发校准操作的官方文案（按钮名、二次确认语、成功提示）。
+     *
+     * <p><b>为何把文案做成接口而不交给前端硬编码</b>：这几段文字是防误操作措施，
+     * 不是普通界面文案。若交由各端自行书写，很可能有人为了按钮宽度好看而改回
+     * 「清零」二字，风险静默复活且无人察觉；集中下发则使其成为可测试的服务端约束。
+     */
+    @GetMapping("/live/watermarks/calibrate-copy")
+    public ApiResponse<Map<String, String>> getCalibrationCopy() {
+        return ApiResponse.success(Map.of(
+                "actionLabel", LiveWatermarkService.CALIBRATION_ACTION_LABEL,
+                "confirmMessage", LiveWatermarkService.CALIBRATION_CONFIRM_MESSAGE,
+                "successMessage", LiveWatermarkService.CALIBRATION_SUCCESS_MESSAGE,
+                "revokeSuccessMessage", LiveWatermarkService.REVOKE_SUCCESS_MESSAGE));
     }
 
     /**
