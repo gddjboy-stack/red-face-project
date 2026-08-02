@@ -375,3 +375,31 @@ CREATE TABLE order_sales_ledger (
   KEY idx_osl_batch (import_batch_id),
   KEY idx_osl_player (player_id, round_id)
 ) ENGINE=InnoDB COMMENT='订单销量流水账-幂等键为子订单编号,人气效果另写popularity_ledger';
+
+-- C20-6: 后台手工销量录入流水账
+-- 背景：8/9 首场不使用订单表批量导入（C20-4C 已完成但暂不启用，因 players.display_code
+-- 无写入入口，见 collaboration/已知缺陷_display_code无写入入口_V1.0.md）。
+-- 改由运营在后台按「选手 + 商品 + 件数」手工录入，选手从下拉框选取，不经过 display_code。
+-- 沿用 C20-3-FIX「不同业务来源分表存储」原则，与 order_sales_ledger 物理隔离：
+-- 两表口径不同（本表无子订单号、无订单状态、无售后判定），混表会让日后对账无法区分数据来源。
+-- quantity 允许负数：负数为冲销纠错，语义与 group_vote_ledger.votes 一致，不做覆盖式修改。
+-- unit_price_cent 是录入时刻的价格快照，不是外键引用：product_price_config 的价格可被改动，
+-- 若不快照，事后核对会用新价重算出与当时实际入账不符的数字，且无人能解释差异来源。
+CREATE TABLE manual_sales_ledger (
+  entry_id         BIGINT NOT NULL AUTO_INCREMENT,
+  round_id         INT NOT NULL,
+  player_id        INT NOT NULL,
+  merchant_code    VARCHAR(64) NOT NULL COMMENT '商品编码,对应product_price_config.merchant_code',
+  product_name     VARCHAR(100) NULL COMMENT '商品名称快照,仅供核对展示',
+  quantity         INT NOT NULL COMMENT '件数增量(正数累加/负数冲销),不可为0',
+  unit_price_cent  BIGINT NOT NULL COMMENT '录入时单价快照(分),防事后改价导致追溯不一致',
+  popularity_value BIGINT NOT NULL COMMENT '本次折算人气值=单价分×件数×10,负数冲销时为负',
+  idempotency_key  VARCHAR(128) NOT NULL,
+  operator_id      VARCHAR(64) NOT NULL,
+  reason           VARCHAR(500) NOT NULL,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entry_id),
+  UNIQUE KEY uq_msl_idem (idempotency_key),
+  KEY idx_msl_round_player (round_id, player_id),
+  KEY idx_msl_round_code (round_id, merchant_code)
+) ENGINE=InnoDB COMMENT='后台手工销量流水账-人气效果另写popularity_ledger,与订单导入物理隔离';

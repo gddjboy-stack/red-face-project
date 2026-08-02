@@ -650,6 +650,186 @@
         </template>
       </el-tab-pane>
 
+      <!--
+        C20-6 后台手工销量录入。8/9 首场的<b>主用</b>销量入账通道。
+        与订单导入的关键差别：不依赖 players.display_code（该字段在生产环境无写入入口，
+        见 DEFECT-001），选手直接从下拉框选，商家编码只用于取单价。
+        防御方向也相反：订单导入防「无意识丢失」，本页防「无意识多算」。
+      -->
+      <el-tab-pane label="销量录入" name="sales">
+        <el-alert type="info" :closable="false" show-icon class="mb-12"
+                  title="本页人气值按「商品原价 × 件数」折算，与订单表导入口径完全一致">
+          录错可用<b>负数件数</b>冲销纠错，冲销同样留痕。每一笔都会写入操作日志，
+          请如实填写操作人与原因。
+        </el-alert>
+
+        <div class="grid-two">
+          <el-card class="panel-card">
+            <div class="panel-title">商品原价配置</div>
+            <p class="tip warning-text">
+              录入前必须先配好原价。商家编码规则为<b>每位选手每款商品一个独立编码</b>，
+              例如 P01-CARD、P01-PHOTO。未配原价的编码无法录入。
+            </p>
+            <el-form @submit.prevent label-width="96px">
+              <el-form-item label="商家编码">
+                <el-input v-model="priceForm.merchantCode" placeholder="P01-CARD" />
+              </el-form-item>
+              <el-form-item label="商品名称">
+                <el-input v-model="priceForm.productName" placeholder="林一明信片" />
+              </el-form-item>
+              <el-form-item label="原价（元）">
+                <el-input v-model="priceForm.unitPriceYuan" placeholder="19.9" />
+              </el-form-item>
+              <el-form-item label="状态">
+                <el-select v-model="priceForm.status" style="width: 160px">
+                  <el-option label="启用" value="active" />
+                  <el-option label="停用" value="disabled" />
+                </el-select>
+              </el-form-item>
+              <div class="form-actions">
+                <el-button native-type="button" type="primary" @click="submitProductPrice">保存配置</el-button>
+                <el-button native-type="button" @click="refreshProductPrices">刷新列表</el-button>
+              </div>
+            </el-form>
+            <el-table :data="productPrices" size="small" style="width: 100%">
+              <el-table-column prop="merchantCode" label="编码" width="120" />
+              <el-table-column prop="productName" label="商品" />
+              <el-table-column label="原价" width="90">
+                <template #default="{ row }">{{ (row.unitPriceCent / 100).toFixed(2) }}</template>
+              </el-table-column>
+              <el-table-column label="状态" width="80">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+                    {{ row.status === 'active' ? '启用' : '停用' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">录入销量</div>
+            <el-form @submit.prevent label-width="96px">
+              <el-form-item label="轮次">
+                <el-select v-model="salesForm.roundId" style="width: 220px">
+                  <el-option v-for="r in rounds" :key="r.roundId" :label="r.name" :value="r.roundId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="选手">
+                <el-select v-model="salesForm.playerId" filterable style="width: 220px">
+                  <el-option v-for="p in players" :key="p.playerId"
+                             :label="`${p.number} 号 ${p.name}`" :value="p.playerId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="商品编码">
+                <el-select v-model="salesForm.merchantCode" filterable style="width: 220px">
+                  <el-option v-for="c in activePriceOptions" :key="c.merchantCode"
+                             :label="`${c.merchantCode}　${c.productName}　${(c.unitPriceCent / 100).toFixed(2)}元`"
+                             :value="c.merchantCode" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="件数">
+                <el-input v-model.number="salesForm.quantity" style="width: 160px" placeholder="30" />
+                <span class="tip">负数为冲销纠错</span>
+              </el-form-item>
+              <el-form-item label="原因">
+                <el-input v-model="salesForm.reason" placeholder="现场统计销量录入" />
+              </el-form-item>
+              <p v-if="salesPreviewText" class="tip">
+                将折算人气值：<b>{{ salesPreviewText }}</b>
+              </p>
+              <div class="form-actions">
+                <el-button native-type="button" type="primary" :loading="salesSubmitting"
+                           @click="submitManualSales(false)">提交录入</el-button>
+              </div>
+            </el-form>
+
+            <!--
+              needs_confirm 必须显式区别于「成功」：它代表<b>尚未入账</b>。
+              若与成功混同，本该入账的销量会凭空消失。
+            -->
+            <el-alert v-if="salesConfirmReason" type="warning" :closable="false" show-icon
+                      class="mb-12" title="这一笔尚未入账，请核对后再确认">
+              <p>{{ salesConfirmReason }}</p>
+              <div class="form-actions">
+                <el-button native-type="button" type="danger" size="small"
+                           :loading="salesSubmitting" @click="submitManualSales(true)">
+                  我已核对，确认录入
+                </el-button>
+                <el-button native-type="button" size="small" @click="salesConfirmReason = ''">
+                  取消
+                </el-button>
+              </div>
+            </el-alert>
+
+            <el-alert v-if="salesLastResult && salesLastResult.status === 'recorded'"
+                      type="success" :closable="false" show-icon class="mb-12"
+                      :title="`已入账：${salesLastResult.playerName} ${salesLastResult.productName} ${salesLastResult.quantity} 件`">
+              折算人气 {{ salesLastResult.popularityValue.toLocaleString() }}，
+              单价 {{ (salesLastResult.unitPriceCent / 100).toFixed(2) }} 元，
+              该商品本轮累计 {{ salesLastResult.totalQuantityAfter }} 件。
+            </el-alert>
+            <el-alert v-if="salesLastResult && salesLastResult.status === 'duplicated'"
+                      type="info" :closable="false" show-icon class="mb-12"
+                      title="这一笔早已入账，未重复计算">
+              若确实要再录一笔相同销量，请重新填写后提交。
+            </el-alert>
+          </el-card>
+        </div>
+
+        <el-card class="panel-card">
+          <div class="panel-title">本轮销量合计（核对用）</div>
+          <p class="tip warning-text">
+            件数与人气值必须并列看：只看人气值无法区分「卖得多」与「单价配错」。
+            件数<b>不跨商品相加</b>，因为不同商品单价不同，合并后的件数没有业务含义。
+          </p>
+          <div class="form-actions">
+            <el-button native-type="button" @click="loadSalesSummary">刷新合计</el-button>
+            <span class="tip">全场人气合计：<b>{{ (salesSummary?.grandTotalPopularity || 0).toLocaleString() }}</b></span>
+          </div>
+          <el-alert v-for="w in (salesSummary?.warnings || [])" :key="w"
+                    type="warning" :closable="false" show-icon class="mb-12" :title="w" />
+          <el-table :data="salesSummary?.players || []" size="small" style="width: 100%" row-key="playerId">
+            <el-table-column type="expand">
+              <template #default="{ row }">
+                <el-table :data="row.products" size="small">
+                  <el-table-column prop="merchantCode" label="商品编码" width="140" />
+                  <el-table-column prop="productName" label="商品" />
+                  <el-table-column prop="totalQuantity" label="净件数" width="90" />
+                  <el-table-column label="单价" width="110">
+                    <template #default="{ row: p }">
+                      <span :class="{ 'warning-text': p.priceInconsistent }">
+                        {{ (p.latestUnitPriceCent / 100).toFixed(2) }}
+                        <template v-if="p.priceInconsistent">
+                          （曾为 {{ (p.earliestUnitPriceCent / 100).toFixed(2) }}）
+                        </template>
+                      </span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="人气值" width="120">
+                    <template #default="{ row: p }">{{ p.totalPopularity.toLocaleString() }}</template>
+                  </el-table-column>
+                  <el-table-column prop="entryCount" label="笔数" width="70" />
+                </el-table>
+              </template>
+            </el-table-column>
+            <el-table-column label="选手" width="180">
+              <template #default="{ row }">{{ row.playerNumber }} 号 {{ row.playerName }}</template>
+            </el-table-column>
+            <el-table-column label="人气合计" width="140">
+              <template #default="{ row }">{{ row.totalPopularity.toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column prop="entryCount" label="录入笔数" width="100" />
+            <el-table-column label="异常" >
+              <template #default="{ row }">
+                <el-tag v-if="row.hasPriceInconsistency" type="warning" size="small">单价不一致</el-tag>
+                <span v-else class="tip">正常</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-tab-pane>
+
       <el-tab-pane label="写真管理" name="photos">
         <div class="grid-two">
           <el-card class="panel-card">
@@ -761,6 +941,13 @@ import {
   type OrderImportPreview,
   type OrderRow
 } from './api/orders'
+import {
+  getManualSalesSummary,
+  newIdempotencyKey,
+  recordManualSales,
+  type ManualSalesEntryResult,
+  type ManualSalesSummary
+} from './api/sales'
 import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
@@ -1205,6 +1392,13 @@ onMounted(async () => {
   await refreshGroupVoteSummary()
   // 商品原价列表预先加载：运营开场前第一件事就是确认配价是否齐全。
   await refreshProductPrices()
+  // 销量录入默认选中进行中的轮次，没有则选第一个。
+  // 不默认为空是因为现场运营容易忘选轮次，而销量录错轮次会直接反映到排名。
+  if (rounds.value.length > 0) {
+    const running = rounds.value.find((r: any) => r.status === 'running')
+    salesForm.roundId = (running || rounds.value[0]).roundId
+    await loadSalesSummary()
+  }
 })
 
 async function onTokenPlayerChange() {
@@ -1468,29 +1662,121 @@ async function submitConfirmOverride() {
     orderLoading.value = false
   }
 }
-</script>
 
-async function submitRefund() {
-  if (!refundForm.tokenId) {
-    ElMessage.error('请输入卡密')
+
+
+
+// ===================== C20-6 后台手工销量录入 =====================
+
+const salesForm = reactive({
+  roundId: null as number | null,
+  playerId: null as number | null,
+  merchantCode: '',
+  quantity: null as number | null,
+  reason: '现场统计销量录入'
+})
+const salesSubmitting = ref(false)
+const salesLastResult = ref<ManualSalesEntryResult | null>(null)
+/** needs_confirm 的提示语。非空即表示「上一笔尚未入账，正等待运营确认」。 */
+const salesConfirmReason = ref('')
+const salesSummary = ref<ManualSalesSummary | null>(null)
+/**
+ * 幂等键在「开始一笔新录入」时生成一次，二次确认时<b>复用同一个键</b>。
+ * 若二次确认时重新生成，运营连点确认按钮就会入账两笔——这正是幂等键要防的事。
+ */
+const salesIdempotencyKey = ref('')
+
+/** 只有启用中的价格配置才能选，停用意味着该商品不该再产生人气。 */
+const activePriceOptions = computed(() =>
+  productPrices.value.filter((p: any) => p.status === 'active')
+)
+
+/**
+ * 提交前的折算预览。让运营在点下按钮之前就看到人气数量级，
+ * 这是比服务端异常量提示更早的一道自查——数字在眼前时更容易发现多打了一位。
+ */
+const salesPreviewText = computed(() => {
+  const cfg = productPrices.value.find((p: any) => p.merchantCode === salesForm.merchantCode)
+  const qty = salesForm.quantity
+  if (!cfg || typeof qty !== 'number' || !Number.isFinite(qty) || qty === 0) return ''
+  const popularity = cfg.unitPriceCent * qty * 10
+  const sign = qty < 0 ? '冲销 ' : ''
+  return `${sign}${(cfg.unitPriceCent / 100).toFixed(2)} 元 × ${Math.abs(qty)} 件 = ${popularity.toLocaleString()}`
+})
+
+async function submitManualSales(confirmed: boolean) {
+  if (!salesForm.roundId) {
+    ElMessage.error('请选择轮次')
     return
   }
-  await ElMessageBox.confirm(`确认对卡密 ${refundForm.tokenId} 进行退款？（不可逆）`, '退款确认', { type: 'warning' })
-  await runAction('退款成功', async () => {
-    return jsonPost('/api/admin/refund', withOperator({
-      tokenId: refundForm.tokenId,
-      reason: refundForm.reason
-    }))
-  }, async () => {
-    refundForm.tokenId = ''
-    refundForm.reason = ''
-  })
+  if (!salesForm.playerId) {
+    ElMessage.error('请选择选手')
+    return
+  }
+  if (!salesForm.merchantCode) {
+    ElMessage.error('请选择商品编码')
+    return
+  }
+  const qty = salesForm.quantity
+  if (typeof qty !== 'number' || !Number.isFinite(qty) || qty === 0) {
+    ElMessage.error('件数必须是非零整数，负数表示冲销')
+    return
+  }
+  if (!Number.isInteger(qty)) {
+    ElMessage.error('件数必须是整数')
+    return
+  }
+  if (!salesForm.reason.trim()) {
+    ElMessage.error('请填写原因，每一笔人气变更都必须可追溯到人')
+    return
+  }
+  // 新的一笔才换幂等键；二次确认沿用上一次的键。
+  if (!confirmed || !salesIdempotencyKey.value) {
+    salesIdempotencyKey.value = newIdempotencyKey()
+  }
+  salesSubmitting.value = true
+  try {
+    const result = await recordManualSales({
+      roundId: salesForm.roundId,
+      playerId: salesForm.playerId,
+      merchantCode: salesForm.merchantCode,
+      quantity: qty,
+      operatorId: operatorId.value,
+      reason: salesForm.reason.trim(),
+      idempotencyKey: salesIdempotencyKey.value,
+      confirmed
+    })
+    salesLastResult.value = result
+    if (result.status === 'needs_confirm') {
+      // 关键：此时<b>尚未入账</b>，不能提示成功，也不能清空表单。
+      salesConfirmReason.value = result.confirmReason || '请再次核对后确认'
+      return
+    }
+    salesConfirmReason.value = ''
+    if (result.status === 'duplicated') {
+      ElMessage.info('这一笔早已入账，未重复计算')
+    } else {
+      ElMessage.success(
+        `已入账：${result.playerName} ${result.productName} ${result.quantity} 件，` +
+        `人气 ${result.popularityValue.toLocaleString()}`
+      )
+      salesForm.quantity = null
+    }
+    salesIdempotencyKey.value = ''
+    await loadSalesSummary()
+  } catch (e: any) {
+    ElMessage.error(e.message || '录入失败')
+  } finally {
+    salesSubmitting.value = false
+  }
 }
 
-function logoutAdmin() {
-  localStorage.removeItem('operatorId')
-  localStorage.removeItem('adminToken')
-  window.location.reload()
+async function loadSalesSummary() {
+  if (!salesForm.roundId) return
+  try {
+    salesSummary.value = await getManualSalesSummary(salesForm.roundId)
+  } catch (e: any) {
+    ElMessage.error(e.message || '加载销量合计失败')
+  }
 }
-
-
+</script>

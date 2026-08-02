@@ -7,6 +7,7 @@ import com.redface.service.CoefficientService;
 import com.redface.dto.DistributionResult;
 import com.redface.dto.GroupVoteSummaryResponse;
 import com.redface.dto.LiveHomeResponse;
+import com.redface.dto.ManualSalesEntryResult;
 import com.redface.dto.OrderImportPreview;
 import com.redface.dto.PopularityBoardResponse;
 import com.redface.dto.PopularityChangeResult;
@@ -17,6 +18,7 @@ import com.redface.entity.ProductPriceConfig;
 import com.redface.service.AdminControlService;
 import com.redface.service.LiveMetricEntryService;
 import com.redface.service.LiveWatermarkService;
+import com.redface.service.ManualSalesService;
 import com.redface.service.OrderImportService;
 import com.redface.service.ProductPriceService;
 import com.redface.util.SheetReader;
@@ -42,19 +44,22 @@ public class AdminControlController {
     private final LiveWatermarkService liveWatermarkService;
     private final OrderImportService orderImportService;
     private final ProductPriceService productPriceService;
+    private final ManualSalesService manualSalesService;
 
     public AdminControlController(AdminControlService adminControlService,
                                   CoefficientService coefficientService,
                                   LiveMetricEntryService liveMetricEntryService,
                                   LiveWatermarkService liveWatermarkService,
                                   OrderImportService orderImportService,
-                                  ProductPriceService productPriceService) {
+                                  ProductPriceService productPriceService,
+                                  ManualSalesService manualSalesService) {
         this.adminControlService = adminControlService;
         this.coefficientService = coefficientService;
         this.liveMetricEntryService = liveMetricEntryService;
         this.liveWatermarkService = liveWatermarkService;
         this.orderImportService = orderImportService;
         this.productPriceService = productPriceService;
+        this.manualSalesService = manualSalesService;
     }
 
     @GetMapping("/live/home")
@@ -266,6 +271,30 @@ public class AdminControlController {
         return ApiResponse.success(productPriceService.save(
                 request.getMerchantCode(), request.getProductName(), request.getUnitPriceYuan(),
                 request.getStatus(), request.getOperatorId()));
+    }
+
+    /**
+     * C20-6 后台手工销量录入。正数累加，负数冲销。
+     *
+     * <p>返回体的 {@code status} 有三种取值，前端必须分开处理：
+     * {@code recorded}（已入账）、{@code duplicated}（幂等拦截，早已入账）、
+     * {@code needs_confirm}（<b>尚未入账</b>，需运营看清提示后带 confirmed=true 重提）。
+     * 若前端把后两者都当成「完成」展示，duplicated 会误导运营重复录入，
+     * needs_confirm 则会让本该入账的销量凭空消失。
+     */
+    @PostMapping("/sales/manual-entry")
+    public ApiResponse<ManualSalesEntryResult> recordManualSales(
+            @RequestBody AdminRequests.ManualSalesEntryRequest request) {
+        return ApiResponse.success(manualSalesService.record(request));
+    }
+
+    /**
+     * C20-6 本轮手工销量汇总（两级展开：外层按选手人气合计，内层按商品件数与人气）。
+     */
+    @GetMapping("/sales/manual-summary")
+    public ApiResponse<ManualSalesService.ManualSalesSummary> getManualSalesSummary(
+            @RequestParam int roundId) {
+        return ApiResponse.success(manualSalesService.summarize(roundId));
     }
 
     /**

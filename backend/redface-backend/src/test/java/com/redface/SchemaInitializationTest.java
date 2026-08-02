@@ -18,7 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class SchemaInitializationTest {
 
-    private static final int EXPECTED_TABLE_COUNT = 25;
+    private static final int EXPECTED_TABLE_COUNT = 26;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -62,7 +62,8 @@ class SchemaInitializationTest {
                         "group_vote_ledger",
                         "live_metric_watermark",
                         "product_price_config",
-                        "order_sales_ledger"
+                        "order_sales_ledger",
+                        "manual_sales_ledger"
                 );
         assertThat(tableNames).hasSize(EXPECTED_TABLE_COUNT);
         assertThat(tableNames)

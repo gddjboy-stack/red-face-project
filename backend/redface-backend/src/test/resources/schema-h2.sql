@@ -1,4 +1,5 @@
 -- H2 测试环境可能因不同 Spring 测试上下文重复初始化，先按外键反向顺序清理旧表。
+DROP TABLE IF EXISTS manual_sales_ledger;
 DROP TABLE IF EXISTS order_sales_ledger;
 DROP TABLE IF EXISTS product_price_config;
 DROP TABLE IF EXISTS live_metric_watermark;
@@ -380,4 +381,24 @@ CREATE TABLE order_sales_ledger (
   UNIQUE KEY uq_sub_order (sub_order_no),
   KEY idx_osl_batch (import_batch_id),
   KEY idx_osl_player (player_id, round_id)
+);
+
+-- C20-6: 后台手工销量录入流水账（与 db/db_schema.sql 保持列级一致，SchemaParityC20Test 强制校验）
+CREATE TABLE manual_sales_ledger (
+  entry_id         BIGINT NOT NULL AUTO_INCREMENT,
+  round_id         INT NOT NULL,
+  player_id        INT NOT NULL,
+  merchant_code    VARCHAR(64) NOT NULL,
+  product_name     VARCHAR(100) NULL,
+  quantity         INT NOT NULL,
+  unit_price_cent  BIGINT NOT NULL,
+  popularity_value BIGINT NOT NULL,
+  idempotency_key  VARCHAR(128) NOT NULL,
+  operator_id      VARCHAR(64) NOT NULL,
+  reason           VARCHAR(500) NOT NULL,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (entry_id),
+  UNIQUE KEY uq_msl_idem (idempotency_key),
+  KEY idx_msl_round_player (round_id, player_id),
+  KEY idx_msl_round_code (round_id, merchant_code)
 );

@@ -225,4 +225,42 @@ public final class AdminRequests {
         public String getOperatorId() { return operatorId; }
         public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
     }
+
+    /**
+     * C20-6 后台手工销量录入请求。
+     *
+     * <p>{@code quantity} 允许负数（冲销纠错），但不允许为 0——0 件既不改变账面
+     * 也不表达意图，通常是运营填错或前端未校验，静默接受只会在账本里留下无意义的空记录。
+     *
+     * <p>{@code confirmed} 用于软重复与异常量的二次确认：首次提交置 false，
+     * 若服务端检测到「近期已有完全相同的录入」或「单笔人气异常偏高」，
+     * 返回 needs_confirm 且<b>不入账</b>；运营看清提示后带 confirmed=true 重提才真正入账。
+     * 两次提交的幂等键必须一致，因此二次确认不会造成重复入账。
+     */
+    public static class ManualSalesEntryRequest {
+        private Integer roundId;
+        private Integer playerId;
+        private String merchantCode;
+        private Integer quantity;
+        private String operatorId;
+        private String reason;
+        private String idempotencyKey;
+        private Boolean confirmed;
+        public Integer getRoundId() { return roundId; }
+        public void setRoundId(Integer roundId) { this.roundId = roundId; }
+        public Integer getPlayerId() { return playerId; }
+        public void setPlayerId(Integer playerId) { this.playerId = playerId; }
+        public String getMerchantCode() { return merchantCode; }
+        public void setMerchantCode(String merchantCode) { this.merchantCode = merchantCode; }
+        public Integer getQuantity() { return quantity; }
+        public void setQuantity(Integer quantity) { this.quantity = quantity; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+        public String getIdempotencyKey() { return idempotencyKey; }
+        public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+        public Boolean getConfirmed() { return confirmed; }
+        public void setConfirmed(Boolean confirmed) { this.confirmed = confirmed; }
+    }
 }
