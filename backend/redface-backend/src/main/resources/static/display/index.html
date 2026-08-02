@@ -56,7 +56,10 @@
     border-radius: 14px;
     text-align: center;
   }
-  .gate-logo { width: 190px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 3px 12px rgba(0,0,0,.5)); }
+  /* 闸门页用 compact 版（无英文副标题）：实测 full 版在此尺寸下
+     "Game Of Beauty" 已糊成一团，看不清的副标题比不放更粗糙。
+     闸门页是内部页，不需要完整品牌信息。 */
+  .gate-logo { width: 230px; height: auto; margin-bottom: 22px; filter: drop-shadow(0 3px 12px rgba(0,0,0,.5)); }
   .gate-title { font-size: 22px; font-weight: 600; letter-spacing: 2px; color: var(--gold-bright); }
   .gate-sub { margin-top: 10px; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
   .gate-card input {
@@ -80,10 +83,18 @@
   #stage.on { display: flex; }
 
   header { display: flex; align-items: flex-end; justify-content: space-between; flex: 0 0 auto; }
-  /* logo 为白底圆角卡片（原始 logo 依赖白色描边，纯透明抠图会让描边消失，实测已否决）。
-     用 drop-shadow 让卡片与深色背景之间有过渡，避免生硬贴片感。 */
+  /* logo 使用彬少提供的 SVG 定稿导出的透明底 PNG。
+     早期版本因只有 JPG 白底图、按亮度抠图会连白色文字描边一起抠掉，
+     不得不加白色圆角底板；现有 SVG 源文件（文字已转路径、无字体依赖），
+     可直接使用真透明素材，底板已移除。深底可读性见
+     evidence/C20-5/logo_svg_on_dark_check.png（四种背景实测）。 */
+  /* logo 尺寸（浏览器实测修正）：
+     66px 高时实测只能看出一个紫粉色圆形，文字完全糊掉。
+     原因：这枚 logo 外圈齿轮占掉约 45% 面积，66px 里文字实际仅 ~36px。
+     提到 100px 后文字区约 55px，投屏可辨识。头部仅多占 34px，
+     榜单区行数由动态计算自动吸收，不会造成裁切。 */
   .title-group { display: flex; align-items: center; gap: 18px; }
-  .logo-mark { height: 62px; width: auto; filter: drop-shadow(0 3px 10px rgba(0,0,0,.55)); }
+  .logo-mark { height: 100px; width: auto; filter: drop-shadow(0 3px 10px rgba(0,0,0,.55)); }
   .brand { font-size: 15px; letter-spacing: 6px; color: var(--gold); }
   .headline { margin-top: 6px; font-size: 40px; font-weight: 700; letter-spacing: 3px; }
   .round-tag { font-size: 15px; color: var(--text-dim); letter-spacing: 1px; text-align: right; }
@@ -97,7 +108,16 @@
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
 
   /* 榜单区：flex:1 + overflow hidden，超出条目自动滚动，不出现浏览器滚动条（OBS 采集不能有滚动条） */
-  #boardWrap { flex: 1 1 auto; margin-top: 22px; overflow: hidden; position: relative; }
+  /* 底部渐隐遮罩（浏览器实测后补充）：
+     轮播容器的内容总高必然大于可视高（下一屏内容就在下方等待滚上来），
+     overflow:hidden 会把临界那一行硬切成一条「露出上半截的灰条」，
+     OBS 采集会原样进入直播画面。用 mask 让它自然淡出，
+     既避开硬切痕，也顺便给出「下方还有内容」的视觉暗示。 */
+  #boardWrap {
+    flex: 1 1 auto; margin-top: 22px; overflow: hidden; position: relative;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 46px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 46px), transparent 100%);
+  }
   #board { transition: transform .6s ease; }
 
   .row {
@@ -153,7 +173,7 @@
 <!-- ========== 令牌闸门 ========== -->
 <div id="gate">
   <div class="gate-card">
-    <img class="gate-logo" src="assets/logo-220.png" alt="红颜局中局" />
+    <img class="gate-logo" src="assets/logo-compact-440.png" alt="红颜局中局" />
     <div class="gate-title">人气榜大屏</div>
     <div class="gate-sub">
       本页为内部展示端，需展示令牌方可访问。<br />
@@ -169,7 +189,7 @@
 <div id="stage">
   <header>
     <div class="title-group">
-      <img class="logo-mark" src="assets/logo-160.png" alt="红颜局中局" />
+      <img class="logo-mark" src="assets/logo-compact-220.png" alt="红颜局中局" />
       <div>
         <div class="brand">RED FACE · POPULARITY BOARD</div>
         <div class="headline" id="boardTitle">选手人气榜</div>
@@ -217,8 +237,38 @@
 'use strict';
 
 var POLL_INTERVAL_MS = 3000;   // 任务卡要求 2~5 秒，取中值 3 秒
-var SCROLL_VISIBLE_ROWS = 8;   // 超过 8 条启用整屏轮播，避免出现滚动条
 var SCROLL_PAGE_MS = 6000;
+
+/* 行高常量必须与 CSS .row 保持一致（height 74 + margin-bottom 10） */
+var ROW_HEIGHT_PX = 74;
+var ROW_GAP_PX = 10;
+
+/* ------------------------------------------------------------------
+   每屏可见行数：必须动态计算，不能硬编码。
+
+   浏览器实测暴露的缺陷：原实现写死 SCROLL_VISIBLE_ROWS = 8，
+   但 8 行需要 8*84-10 = 662px，而 768 高的窗口里榜单区只有约 540px，
+   #boardWrap 的 overflow:hidden 会把第 7、8 行直接裁掉，
+   同时页码按 8 行计算显示「第 2/2 屏」——页码与实际可见内容不一致。
+
+   关键判断：这个数字填任何固定值都是错的。
+   8/9 现场投屏若为 1080p，一屏可放约 10 行，写 8 就白白少显 2 名选手；
+   若现场画面比实测更小，又会继续裁切。只有按实际容器高度计算，
+   才能在任意分辨率、以及全屏切换前后都正确。
+------------------------------------------------------------------ */
+function visibleRows() {
+  var wrap = document.getElementById('boardWrap');
+  var h = wrap ? wrap.clientHeight : 0;
+  if (!h) { return 6; }   // 容器尚未布局完成时的保守兜底
+  /* 保守取整：DOM 里**每一行都真实带着 margin-bottom**（包括末行），
+     所以 n 行实际占高 = n*(H+G)，不能写成 n*(H+G)-G。
+     首次实测就是因为多算了那 10px，恰好在临界点多算出一行，
+     导致第 11 行只露出上半截被切断。
+     宁可少一行、底部留一点空隙，也不能让行被切断——
+     直播画面里「半截字」比「留一点空」严重得多。 */
+  var n = Math.floor(h / (ROW_HEIGHT_PX + ROW_GAP_PX));
+  return Math.max(1, n);
+}
 
 var state = {
   tab: 'player',
@@ -369,7 +419,7 @@ function render() {
 
   // 条目数量可能因淘汰而变少，需重算屏数并修正越界的当前页，
   // 否则会停在一个已不存在的屏上，画面变空白。
-  var pages = Math.max(1, Math.ceil(state.items.length / SCROLL_VISIBLE_ROWS));
+  var pages = Math.max(1, Math.ceil(state.items.length / visibleRows()));
   if (state.scrollPage >= pages) {
     state.scrollPage = 0;
     $('board').style.transform = 'translateY(0)';
@@ -380,25 +430,29 @@ function render() {
 /*
  * 超出可见行数时整屏轮播，保证 OBS 画面内无滚动条。
  *
- * 关键修正（浏览器实测暴露）：不能用 page * VISIBLE_ROWS 算偏移量。
- * 12 条 / 每屏 8 条时，末屏只剩 4 条，那样算会让画面下半部分全是空白。
+ * 关键修正一（浏览器实测暴露）：不能用 page * rows 直接算偏移量。
+ * 末屏条目不足一屏时，那样算会让画面下半部分全是空白。
  * 直播画面出现大片空白比少显几条更难看，因此末屏改为「对齐底部」：
- * 偏移量上限为 (total - VISIBLE_ROWS) 行，末屏会与前一屏部分重叠但画面全满。
+ * 偏移量上限为 (total - rows) 行，末屏会与前一屏部分重叠但画面全满。
+ *
+ * 关键修正二：rows 每次重新取值，不用硬编码。否则全屏切换后
+ * 容器高度变了而分屏依据没变，会同时出现裁切和页码不一致。
  */
 function rollScroll() {
   var total = state.items.length;
-  if (total <= SCROLL_VISIBLE_ROWS) {
+  var rows = visibleRows();
+  if (total <= rows) {
     state.scrollPage = 0;
     $('board').style.transform = 'translateY(0)';
     updatePageTag(1, 1);
     return;
   }
-  var pages = Math.ceil(total / SCROLL_VISIBLE_ROWS);
+  var pages = Math.ceil(total / rows);
   state.scrollPage = (state.scrollPage + 1) % pages;
 
-  var rowH = 84; // 74px 行高 + 10px 间距
-  var maxOffsetRows = total - SCROLL_VISIBLE_ROWS;
-  var offsetRows = Math.min(state.scrollPage * SCROLL_VISIBLE_ROWS, maxOffsetRows);
+  var rowH = ROW_HEIGHT_PX + ROW_GAP_PX;
+  var maxOffsetRows = total - rows;
+  var offsetRows = Math.min(state.scrollPage * rows, maxOffsetRows);
   $('board').style.transform = 'translateY(-' + (offsetRows * rowH) + 'px)';
   updatePageTag(state.scrollPage + 1, pages);
 }
@@ -411,7 +465,7 @@ function updatePageTag(cur, total) {
 // 预加载 logo：Canvas 的 drawImage 要求图片已完成加载，不能等到点击时才取。
 // 页面加载即开始拉取，到运营点「生成分享图」时早已就绪。
 var shareLogo = new Image();
-shareLogo.src = 'assets/logo-220.png';
+shareLogo.src = 'assets/logo-full-880.png';
 
 function drawShareImage() {
   var c = $('shareCanvas');
@@ -432,11 +486,13 @@ function drawShareImage() {
 
   // 项目 logo：居中置顶。使用已缓存的图片对象，未加载完成时降级为文字标题——
   // 分享图是对外物料，宁可少一个 logo 也不能出一张标题缺失的图。
-  // 尺寸经过版式核算：logo 240 宽（高 ~174）下，第 10 行底部距页脚尚有余量；
-  // 若改回 300 宽会使第 10 名压在页脚文字上，勿调大。
+  // 尺寸经版式核算（不是目测）：现素材 880x507，高/宽 0.5761，
+  // 比旧白底卡片（0.725）更扁，同宽下更矮，故版式余量变大。
+  // 300 宽时 logo 高 173，第 10 行底边距页脚约 57px，安全；
+  // 若调至 360 宽余量仅 23px，接近压页脚，勿再调大。
   var logoBottom = 96;
   if (shareLogo && shareLogo.complete && shareLogo.naturalWidth > 0) {
-    var lw = 240;
+    var lw = 300;
     var lh = lw * shareLogo.naturalHeight / shareLogo.naturalWidth;
     ctx.drawImage(shareLogo, (W - lw) / 2, 40, lw, lh);
     logoBottom = 40 + lh;
@@ -588,6 +644,25 @@ $('fsBtn').addEventListener('click', function () {
   if (document.fullscreenElement) { document.exitFullscreen(); }
   else { document.documentElement.requestFullscreen(); }
 });
+
+/* 窗口尺寸 / 全屏状态变化后必须重算分屏。
+   否则切入全屏（容器变高、可放行数增加）后，旧的 scrollPage 依据仍在，
+   会停在一个已不存在的屏上，画面出现大片空白——而全屏正是 8/9 现场
+   开播前的必做动作，这个场景不能遗漏。 */
+var relayoutTimer = null;
+function scheduleRelayout() {
+  if (relayoutTimer) { clearTimeout(relayoutTimer); }
+  // 全屏切换伴随动画，立即读 clientHeight 可能拿到过渡中间值，稍延后再算
+  relayoutTimer = setTimeout(function () {
+    state.scrollPage = 0;
+    $('board').style.transform = 'translateY(0)';
+    var rows = visibleRows();
+    var pages = Math.max(1, Math.ceil(state.items.length / rows));
+    updatePageTag(1, pages);
+  }, 260);
+}
+window.addEventListener('resize', scheduleRelayout);
+document.addEventListener('fullscreenchange', scheduleRelayout);
 
 // 按 h 隐藏/显示底部操作条：OBS 采集时按钮不应进入直播画面
 document.addEventListener('keydown', function (e) {
