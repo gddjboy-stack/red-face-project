@@ -1,5 +1,6 @@
 package com.redface.service;
 
+import com.redface.config.AppConstants;
 import com.redface.dto.OrderRowParseResult;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -33,8 +34,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderSheetParser {
 
-    /** 1 元 = 1000 人气值 → 1 分 = 10 人气值。来源：《人气值换算公式初稿 V1.3》第 2.2 节 */
-    public static final long POPULARITY_PER_CENT = 10L;
+    // 人气换算常量已上提至 AppConstants.POPULARITY_PER_CENT（Claude 裁定 E8）。
+    // 原因：C20-4C 订单导入已封存而 C20-6 手工录入在用，常量留在本类会形成
+    // 「启用中的模块依赖已封存的模块」。来源：《人气值换算公式初稿 V1.3》第 2.2 节。
 
     // ===== 表头别名映射：同一语义字段在标准报表/自定义报表中的可能写法 =====
     private static final Map<String, List<String>> HEADER_ALIASES = new LinkedHashMap<>();
@@ -217,7 +219,7 @@ public class OrderSheetParser {
 
     /** 按原价 × 件数计算人气值（John 2026-08-01 决策：按金额、按原价） */
     public long computePopularity(long unitPriceCent, int quantity) {
-        return unitPriceCent * quantity * POPULARITY_PER_CENT;
+        return unitPriceCent * quantity * AppConstants.POPULARITY_PER_CENT;
     }
 
     // ===== 清洗工具 =====

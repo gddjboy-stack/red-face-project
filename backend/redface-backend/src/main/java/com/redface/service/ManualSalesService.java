@@ -1,5 +1,6 @@
 package com.redface.service;
 
+import com.redface.config.ManualSalesProperties;
 import com.redface.dto.AdminRequests;
 import com.redface.dto.ManualSalesEntryResult;
 import com.redface.dto.ManualSalesSummaryItem;
@@ -42,35 +43,28 @@ public class ManualSalesService {
     /** 幂等键前缀，与群投票的 gv_ 同风格，便于在账本里一眼区分来源。 */
     private static final String IDEM_PREFIX = "ms_";
 
-    /** 软重复检测窗口：近 60 秒内出现完全相同的录入即提示。 */
-    private static final int RECENT_WINDOW_SECONDS = 60;
-
-    /**
-     * 单笔异常量阈值：单笔折算人气超过本轮当前最高选手人气的此倍数时要求二次确认。
-     * 取 2 倍是保守值——正常一笔录入不太可能一次性超过全场领先者两倍。
-     * 本轮尚无任何录入时不做此校验（无参照基准，任何数字都会触发，只会制造噪音）。
-     */
-    private static final long ABNORMAL_MULTIPLE = 2L;
-
     private final ManualSalesLedgerMapper ledgerMapper;
     private final ProductPriceConfigMapper priceMapper;
     private final BasicDataMapper basicDataMapper;
     private final OperationsLogMapper operationsLogMapper;
     private final PopularityService popularityService;
     private final OrderSheetParser parser;
+    private final ManualSalesProperties props;
 
     public ManualSalesService(ManualSalesLedgerMapper ledgerMapper,
                               ProductPriceConfigMapper priceMapper,
                               BasicDataMapper basicDataMapper,
                               OperationsLogMapper operationsLogMapper,
                               PopularityService popularityService,
-                              OrderSheetParser parser) {
+                              OrderSheetParser parser,
+                              ManualSalesProperties props) {
         this.ledgerMapper = ledgerMapper;
         this.priceMapper = priceMapper;
         this.basicDataMapper = basicDataMapper;
         this.operationsLogMapper = operationsLogMapper;
         this.popularityService = popularityService;
         this.parser = parser;
+        this.props = props;
     }
 
     /**
@@ -190,23 +184,32 @@ public class ManualSalesService {
                                     int quantity, long popularityValue) {
         // 情形一：软重复。既有幂等键由前端生成，只能防「同一次点击的重复提交」；
         // 「运营以为没成功、手动又点一次」会得到新的幂等键而正常入账，幂等机制对此无效。
-        // 同一选手同一商品同一件数在 60 秒内出现两次，是这种情形的典型指纹。
-        LocalDateTime since = LocalDateTime.now().minusSeconds(RECENT_WINDOW_SECONDS);
+        // 同一选手同一商品同一件数在窗口期内出现两次，是这种情形的典型指纹。
+        int windowSeconds = props.getRecentWindowSeconds();
+        LocalDateTime since = LocalDateTime.now().minusSeconds(windowSeconds);
         int recent = ledgerMapper.countRecentSame(roundId, playerId, merchantCode, quantity, since);
         if (recent > 0) {
-            return RECENT_WINDOW_SECONDS + " 秒内已录入过完全相同的一笔（" + merchantCode
+            return windowSeconds + " 秒内已录入过完全相同的一笔（" + merchantCode
                     + " × " + quantity + " 件，共 " + recent + " 笔）。若这确实是新增的一笔销量，"
                     + "请确认后重新提交；若是误操作，请勿确认";
         }
 
-        // 情形二：单笔异常量。防的是「多打一个零」——这是手工录入最典型的错误，
+        // 情形二：单笔件数异常。防的是「多打一个零」——这是手工录入最典型的错误，
         // 且一旦发生，选手人气会被放大十倍而账面看不出任何异常。
-        // 本轮尚无录入时跳过：没有参照基准，任何数字都会触发，只会制造噪音。
-        long maxSoFar = ledgerMapper.maxPlayerPopularity(roundId);
-        if (maxSoFar > 0 && popularityValue > maxSoFar * ABNORMAL_MULTIPLE) {
-            return "本笔折算人气 " + popularityValue + "，超过本轮当前最高选手人气（" + maxSoFar
-                    + "）的 " + ABNORMAL_MULTIPLE + " 倍。请核对件数是否多打了一位数字，"
-                    + "确认无误后重新提交";
+        //
+        // Claude 裁定 A1：校验对象从「折算人气 vs 本轮最高人气的倍数」改为「绝对件数」。
+        // 两个理由：其一，旧方案会在轮次初期稳定误报（一笔 30 件×199 元 = 597,000 人气，
+        // 而当时最高选手可能只有几千），而频繁误报会让运营习惯性点确认，防线自动失效；
+        // 其二，错误发生在件数上（运营把 30 敲成 300），校验对象必须与出错对象一致，
+        // 否则提示文案无法指向运营该复核的地方。
+        //
+        // 取绝对值则同时覆盖正负：冲销 -300 件同样是多打一个零，且冲销方向是扣减人气，
+        // 错了更不容易被发现（选手不会来投诉自己人气过高，也不一定盯着自己得分）。
+        int threshold = props.getAbnormalQuantityThreshold();
+        if (Math.abs(quantity) > threshold) {
+            return "本笔件数 " + quantity + "（绝对值 " + Math.abs(quantity)
+                    + "）超过单笔阈值 " + threshold + " 件，折算人气 " + popularityValue
+                    + "。请核对件数是否多打了一位数字，确认无误后重新提交";
         }
         return null;
     }

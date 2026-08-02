@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.redface.config.ManualSalesProperties;
 import com.redface.dto.AdminRequests;
 import com.redface.dto.ManualSalesEntryResult;
 import com.redface.dto.ManualSalesSummaryItem;
@@ -44,6 +45,8 @@ class ManualSalesC20Test {
     private ProductPriceService productPriceService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private ManualSalesProperties manualSalesProperties;
 
     private static final int ROUND_ID = 1;
     private static final int PLAYER_A = 21;
@@ -219,34 +222,77 @@ class ManualSalesC20Test {
         assertEquals(20, r.getTotalQuantityAfter());
     }
 
-    // ---------- 三、异常量提示（防多打一个零） ----------
+    // ---------- 三、件数异常提示（防多打一个零） ----------
+    //
+    // Claude 裁定 A1：阈值由「2 倍本轮最高选手人气」改为「绝对件数 200」。
+    // 旧方案会在轮次初期稳定误报，而频繁误报会让运营习惯性点确认，防线自动失效。
 
     @Test
-    @DisplayName("单笔人气超过本轮最高者两倍时要求二次确认，且此时未入账")
-    void abnormalAmountRequiresConfirm() {
-        // 先给陈二录入一个基准量：19.9 × 10 × 10 = 199000
-        manualSalesService.record(req(PLAYER_B, CODE_B_CARD, 10, "base"));
-
-        // 林一录入 100 件写真：5900 × 100 × 10 = 5,900,000，远超基准两倍
-        AdminRequests.ManualSalesEntryRequest big = req(PLAYER_A, CODE_PHOTO, 100, "big");
+    @DisplayName("单笔件数超过阈值时要求二次确认，且此时未入账")
+    void abnormalQuantityRequiresConfirm() {
+        AdminRequests.ManualSalesEntryRequest big = req(PLAYER_A, CODE_PHOTO, 201, "big");
         big.setConfirmed(Boolean.FALSE);
         ManualSalesEntryResult r = manualSalesService.record(big);
 
         assertEquals(ManualSalesEntryResult.STATUS_NEEDS_CONFIRM, r.getStatus());
         assertTrue(r.getConfirmReason().contains("多打了一位数字"));
-        assertEquals(1, ledgerCount(), "需确认时不得落库");
+        assertTrue(r.getConfirmReason().contains("200 件"), "提示必须告知具体阈值，否则运营无法判断自己超了多少");
+        assertEquals(0, ledgerCount(), "需确认时不得落库");
         assertEquals(0L, popularityOf(PLAYER_A));
     }
 
     @Test
-    @DisplayName("本轮首笔录入不触发异常量提示：无参照基准时任何数字都会触发，只会制造噪音")
-    void firstEntryOfRoundSkipsAbnormalCheck() {
-        AdminRequests.ManualSalesEntryRequest first = req(PLAYER_A, CODE_PHOTO, 100, "first-big");
+    @DisplayName("阈值边界：恰好等于 200 件不提示，201 件才提示")
+    void thresholdBoundaryIsInclusive() {
+        AdminRequests.ManualSalesEntryRequest onLine = req(PLAYER_A, CODE_CARD, 200, "on-line");
+        onLine.setConfirmed(Boolean.FALSE);
+        assertEquals(ManualSalesEntryResult.STATUS_RECORDED,
+                manualSalesService.record(onLine).getStatus());
+    }
+
+    @Test
+    @DisplayName("本轮首笔录入也适用件数阈值：绝对阈值不需参照基准，这正是它优于倍数方案之处")
+    void firstEntryOfRoundStillChecksQuantity() {
+        // 旧方案下本轮首笔必须跳过校验（无参照基准），
+        // 意味着「开场第一笔就把 30 敲成 300」这个最危险的场景恰恰无人拦。
+        // 改为绝对件数后首笔同样受保护。
+        AdminRequests.ManualSalesEntryRequest first = req(PLAYER_A, CODE_PHOTO, 300, "first-big");
         first.setConfirmed(Boolean.FALSE);
         ManualSalesEntryResult r = manualSalesService.record(first);
 
-        assertEquals(ManualSalesEntryResult.STATUS_RECORDED, r.getStatus());
-        assertEquals(5900000L, r.getPopularityValue());
+        assertEquals(ManualSalesEntryResult.STATUS_NEEDS_CONFIRM, r.getStatus());
+        assertEquals(0, ledgerCount());
+    }
+
+    @Test
+    @DisplayName("负数冲销同样受件数阈值保护：冲销 -300 件也是多打一个零")
+    void abnormalQuantityAppliesToReversalToo() {
+        // 先建立足够库存，使本笔冲销不会因「冲成负数」而报错，
+        // 否则无法区分拦下它的到底是哪道防线。
+        AdminRequests.ManualSalesEntryRequest stock = req(PLAYER_A, CODE_CARD, 200, "stock1");
+        stock.setConfirmed(Boolean.TRUE);
+        manualSalesService.record(stock);
+        AdminRequests.ManualSalesEntryRequest stock2 = req(PLAYER_A, CODE_CARD, 200, "stock2");
+        stock2.setConfirmed(Boolean.TRUE);
+        manualSalesService.record(stock2);
+
+        AdminRequests.ManualSalesEntryRequest bigRev = req(PLAYER_A, CODE_CARD, -300, "big-rev");
+        bigRev.setConfirmed(Boolean.FALSE);
+        ManualSalesEntryResult r = manualSalesService.record(bigRev);
+
+        assertEquals(ManualSalesEntryResult.STATUS_NEEDS_CONFIRM, r.getStatus(),
+                "冲销方向是扣减人气，错了更不容易被发现，必须同样拦");
+        assertTrue(r.getConfirmReason().contains("绝对值 300"));
+    }
+
+    @Test
+    @DisplayName("件数阈值可配置：阈值从配置读取而非硬编码")
+    void thresholdIsConfigurable() {
+        // 不在测试里改配置值（会污染其他用例的上下文），
+        // 只断言配置类已被 Spring 注入且默认值为裁定的 200。
+        // 真正的可配置性由上一个用例的提示文案含「200 件」间接证实。
+        assertEquals(200, manualSalesProperties.getAbnormalQuantityThreshold());
+        assertEquals(60, manualSalesProperties.getRecentWindowSeconds());
     }
 
     // ---------- 四、负数冲销 ----------

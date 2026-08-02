@@ -738,6 +738,15 @@
               <p v-if="salesPreviewText" class="tip">
                 将折算人气值：<b>{{ salesPreviewText }}</b>
               </p>
+              <!--
+                件数达到服务端阈值量级时提前告知。这不是拦截（真正的防线在服务端），
+                而是让运营在点提交之前就有机会自己发现多打了一位——
+                弹窗后再改比提交前发现的心理成本高得多。
+              -->
+              <p v-if="salesQuantityLooksLarge" class="tip" style="color: #e6a23c">
+                注意：本笔件数绝对值已超过 {{ SALES_QTY_HINT_THRESHOLD }} 件，提交后将要求二次确认。
+                请先自行核对是否多打了一位数字。
+              </p>
               <div class="form-actions">
                 <el-button native-type="button" type="primary" :loading="salesSubmitting"
                            @click="submitManualSales(false)">提交录入</el-button>
@@ -1692,8 +1701,8 @@ const activePriceOptions = computed(() =>
 )
 
 /**
- * 提交前的折算预览。让运营在点下按钮之前就看到人气数量级，
- * 这是比服务端异常量提示更早的一道自查——数字在眼前时更容易发现多打了一位。
+ * 提交前的折算预览。让运营在点下按钮之前就看到件数与人气数量级，
+ * 这是比服务端件数异常提示更早的一道自查——数字在眼前时更容易发现多打了一位。
  */
 const salesPreviewText = computed(() => {
   const cfg = productPrices.value.find((p: any) => p.merchantCode === salesForm.merchantCode)
@@ -1702,6 +1711,20 @@ const salesPreviewText = computed(() => {
   const popularity = cfg.unitPriceCent * qty * 10
   const sign = qty < 0 ? '冲销 ' : ''
   return `${sign}${(cfg.unitPriceCent / 100).toFixed(2)} 元 × ${Math.abs(qty)} 件 = ${popularity.toLocaleString()}`
+})
+
+/**
+ * 件数是否已达服务端会拦下的量级（与后端 Claude 裁定 A1 的 200 件保持一致）。
+ *
+ * 前端硬编码这个数字是一个已知弱点：后端阈值可由环境变量调整，
+ * 而前端不会跟着变，二者不一致时前端提示会与实际拦截行为错位。
+ * 不做成接口下发是因为它仅用于提示强弱（文字颜色），不参与任何拦截判定——
+ * 真正的防线在服务端。若日后阈值频繁调整，应改为从接口读取。
+ */
+const SALES_QTY_HINT_THRESHOLD = 200
+const salesQuantityLooksLarge = computed(() => {
+  const qty = salesForm.quantity
+  return typeof qty === 'number' && Number.isFinite(qty) && Math.abs(qty) > SALES_QTY_HINT_THRESHOLD
 })
 
 async function submitManualSales(confirmed: boolean) {

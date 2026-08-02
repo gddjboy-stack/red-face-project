@@ -115,15 +115,8 @@ public interface ManualSalesLedgerMapper {
                         @Param("quantity") int quantity,
                         @Param("since") java.time.LocalDateTime since);
 
-    /** 查询本轮全部选手的人气合计（用于超额提示的参照基准）。 */
-    @Select("""
-            SELECT COALESCE(MAX(t.total), 0)
-            FROM (
-                SELECT SUM(popularity_value) AS total
-                FROM manual_sales_ledger
-                WHERE round_id = #{roundId}
-                GROUP BY player_id
-            ) t
-            """)
-    long maxPlayerPopularity(@Param("roundId") int roundId);
+    // 已删除 maxPlayerPopularity（本轮选手人气最大值）。
+    // 原为 A1 异常量阈值的参照基准，Claude 裁定 A1 改为绝对件数阈值后失去唯一调用方。
+    // 不保留「以备以后用」：无调用方的 SQL 不会被任何测试覆盖，
+    // 日后表结构变更时它不会报错，只会在某天被重新启用时静默算错。
 }

@@ -13,6 +13,15 @@ public final class AppConstants {
     public static final long POPULARITY_PER_LIKE = 1L;
     /** 1条留言 = 100人气值 */
     public static final long POPULARITY_PER_COMMENT = 100L;
+    /**
+     * 商品销售：单价 1 分 = 10 人气值（1 元 = 1000 人气值，与抖币口径一致）。
+     *
+     * <p><b>Claude 裁定 E8：由 OrderSheetParser 上提至此。</b>
+     * 原位置在订单表解析器里，而 C20-4C（订单导入）已封存、C20-6（手工录入）在用，
+     * 造成「启用中的模块依赖已封存的模块」，日后清理封存代码时容易误伤。
+     * 两条链路必须共用同一口径：若出现分歧，同一笔销量会算出不同人气，而账面无法解释差异。
+     */
+    public static final long POPULARITY_PER_CENT = 10L;
 
     // ===== 加成系数(×100整数存储) =====
     /** 初始系数 1.0 */

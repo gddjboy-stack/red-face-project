@@ -79,6 +79,21 @@ redface:
     # 保留开关以便 8/3 首场实测后若误差不可接受可一行回退。
     gift-watermark-enabled: ${GIFT_WATERMARK_ENABLED:true}
 
+  # C20-6 后台手工销量录入。两个阈值都是「打扰运营」与「拦住错误」的权衡点，
+  # 正确取值只能在真实直播现场观察后才知道，故做成配置项而非常量（现场调值无需重新构建）。
+  manual-sales:
+    # 单笔件数异常阈值（取绝对值，正负同等适用）。
+    # Claude 裁定 A1：由「2 倍本轮最高选手人气」改为「绝对件数 200」。
+    # 旧方案错在选错参照物：一笔 30 件×199 元折算 597,000 人气，
+    # 而轮次初期最高选手可能才几千，会稳定误报；而频繁误报会让运营
+    # 习惯性点确认，防线自动失效。且错误发生在件数上（30 敲成 300），
+    # 校验对象必须与出错对象一致。此值须在 8/9 首场后按实际销量分布复核。
+    abnormal-quantity-threshold: ${MANUAL_SALES_ABNORMAL_QTY:200}
+    # 软重复检测窗口（秒）。Claude 裁定 A2：维持 60 秒。
+    # 防的是「运营以为没提交成功、手动又点一次」——前端生成的幂等键对此无效，
+    # 因为那是一次新的点击，会得到新的幂等键而正常入账。
+    recent-window-seconds: ${MANUAL_SALES_RECENT_WINDOW:60}
+
   # C17 写真上传管理：P0 使用本地持久化目录 + 静态资源映射。
   photo-storage:
     upload-dir: ${PHOTO_UPLOAD_DIR:${user.home}/redface-uploads/photos}
