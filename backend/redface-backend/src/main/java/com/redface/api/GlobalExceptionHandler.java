@@ -1,5 +1,6 @@
 package com.redface.api;
 
+import com.redface.exception.OrderImportBlockedException;
 import com.redface.service.LiveMetricEntryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +78,20 @@ public class GlobalExceptionHandler {
             LiveMetricEntryService.WatermarkCalibrationRequiredException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(40910, e.getMessage(), e.getPreview()));
+    }
+
+    /**
+     * C20-4C 订单导入硬阻断：存在未归属行时拒绝普通确认。
+     *
+     * <p>用 409 而非 400：请求本身没写错，是系统状态（缺单价配置、编号未匹配、配置已停用）
+     * 与提交内容不一致，<b>需要人来判断</b>。此时未写入任何数据且预览令牌仍可用，
+     * 运营可补完配置后重新预览，或改走覆盖入口逐笔确认排除。
+     * 响应 data 携带未归属子订单号列表，供前端直接列出。
+     */
+    @ExceptionHandler(OrderImportBlockedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleOrderImportBlocked(OrderImportBlockedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(40920, e.getMessage(), e.getUnattributedSubOrderNos()));
     }
 
     @ExceptionHandler(Exception.class)

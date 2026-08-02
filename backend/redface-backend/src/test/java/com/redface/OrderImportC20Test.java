@@ -382,7 +382,12 @@ class OrderImportC20Test {
         rows.add(row("8003", "P77", "1", "19.9", "已完成", "\u2013", "2026-08-09 21:32:00"));
 
         OrderImportPreview preview = orderImportService.preview(rows, ROUND_ID);
-        Map<String, Object> result = orderImportService.confirm(preview.getPreviewToken(), "tester");
+        // C20-4C：8003 属未归属行，普通确认已被硬阻断，须走显式排除入口。
+        // 本用例验证的是「落库完整性」，改走覆盖入口后该断言仍成立且语义更强：
+        // 被显式排除的行也必须落库，否则赛后没有任何记录可供解释。
+        Map<String, Object> result = orderImportService.confirmWithOverride(
+                preview.getPreviewToken(), "tester",
+                preview.getUnattributedSubOrderNos(), "P77 为测试编号，不属于本场选手");
         assertEquals(3, result.get("insertedRows"), "三行全部落库，含无效与未归属");
 
         Integer total = jdbcTemplate.queryForObject(

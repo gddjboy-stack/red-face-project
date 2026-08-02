@@ -104,3 +104,50 @@ body {
   margin-left: 8px;
   font-size: 12px;
 }
+
+/* C20-4C 订单导入预览指标卡。多个数字并排，运营需要一眼看到「未归属」这一格。 */
+.metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.metric-box {
+  flex: 1 1 120px;
+  min-width: 120px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #eaded6;
+  background: #fdfaf8;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: #7c6f76;
+  margin-bottom: 4px;
+}
+
+/* 未归属行用醒目描边：这一格非零就意味着钱收到了但没人加分。 */
+.metric-danger {
+  border-color: #f0a4a4;
+  background: #fdf2f2;
+}
+
+.metric-danger .metric-number {
+  color: #c0392b;
+}
+
+.metric-warn {
+  border-color: #f2d59a;
+  background: #fdf8ee;
+}
+
+.metric-warn .metric-number {
+  color: #b45309;
+}
+
+/* 通用下外边距，用于告警条与卡片之间留白 */
+.mb-12 {
+  margin-bottom: 12px;
+}

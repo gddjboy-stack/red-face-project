@@ -180,6 +180,31 @@ public final class AdminRequests {
     }
 
     /**
+     * C20-4C 确认导入并显式排除未归属订单。
+     *
+     * <p>{@code overrideSubOrderNos} 必须逐笔列出且与预览的未归属行完全一致；
+     * 设计上不接受「全选标志位」这类参数——一个布尔值能被前端默认勾上，
+     * 而逐笔子订单号无法在不看内容的情况下凭空填写。
+     * {@code overrideReason} 为必填，空白将被服务层拒绝。
+     */
+    public static class OrderImportOverrideRequest {
+        private String previewToken;
+        private String operatorId;
+        private java.util.List<String> overrideSubOrderNos;
+        private String overrideReason;
+        public String getPreviewToken() { return previewToken; }
+        public void setPreviewToken(String previewToken) { this.previewToken = previewToken; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public java.util.List<String> getOverrideSubOrderNos() { return overrideSubOrderNos; }
+        public void setOverrideSubOrderNos(java.util.List<String> overrideSubOrderNos) {
+            this.overrideSubOrderNos = overrideSubOrderNos;
+        }
+        public String getOverrideReason() { return overrideReason; }
+        public void setOverrideReason(String overrideReason) { this.overrideReason = overrideReason; }
+    }
+
+    /**
      * C20-4B 商品原价配置。单价以「元」提交（如 19.9），服务层转成「分」存储，
      * 全链路整数运算避免浮点误差。
      */

@@ -62,6 +62,19 @@ public interface OrderSalesLedgerMapper {
     @Select("SELECT player_id FROM players WHERE display_code = #{displayCode}")
     Integer findPlayerIdByDisplayCode(@Param("displayCode") String displayCode);
 
+    /**
+     * 按商家编码取选手姓名（C20-4C）。
+     *
+     * <p>按选手汇总核对视图若只显示编号（P12），运营需在脑内完成一次「编号→人」的翻译，
+     * 而这道翻译正是最容易出错且最难被发现的一步——编号配错时数字看起来完全正常。
+     * 带上姓名后，「P12 选手甲 300 件」这种异常行运营能当场看出。
+     *
+     * @param displayCode 选手编号，如 P12
+     * @return 选手姓名，未命中返回 null
+     */
+    @Select("SELECT name FROM players WHERE display_code = #{displayCode}")
+    String findPlayerNameByDisplayCode(@Param("displayCode") String displayCode);
+
     /** 批次汇总，供导入后核对与赛后审计 */
     @Select("""
             SELECT validity, COUNT(*) AS row_count, COALESCE(SUM(popularity_value), 0) AS popularity_sum

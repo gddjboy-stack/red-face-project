@@ -32,6 +32,12 @@ public class OrderRowParseResult {
     private String validity;
     private String invalidReason;
     private boolean inAftersale;
+    /**
+     * C20-4C：订单状态不在已知枚举内。这类行当前归入 invalid 不计入，
+     * 但它与「已关闭/已退款」这种<b>确定无效</b>性质不同——它是「我们不认识这个状态」。
+     * 抖店平台新增状态名称时，这类行会静默少算，须单独计数并在预览里醒目提示。
+     */
+    private boolean unknownOrderStatus;
     private LocalDateTime paidAt;
     private Long payableAmountCent;
     private Map<String, String> rawRow;
@@ -77,6 +83,11 @@ public class OrderRowParseResult {
 
     public boolean isInAftersale() { return inAftersale; }
     public void setInAftersale(boolean inAftersale) { this.inAftersale = inAftersale; }
+
+    public boolean isUnknownOrderStatus() { return unknownOrderStatus; }
+    public void setUnknownOrderStatus(boolean unknownOrderStatus) {
+        this.unknownOrderStatus = unknownOrderStatus;
+    }
 
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }

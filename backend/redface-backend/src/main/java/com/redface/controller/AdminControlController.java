@@ -209,14 +209,45 @@ public class AdminControlController {
     }
 
     /**
+     * C20-4C 导入前置检查：只校验，<b>不生成预览令牌、不落库</b>，供赛前空跑。
+     *
+     * <p>与 {@code /orders/preview} 的区别仅在于不产生令牌：空跑后不会遗留一个
+     * 可被误点的有效确认入口。解析与归属判定走同一代码路径，
+     * 以保证「空跑通过但正式导入被拦」不会发生。
+     */
+    @PostMapping("/orders/preflight")
+    public ApiResponse<OrderImportPreview> preflightOrderImport(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false) Integer roundId) {
+        return ApiResponse.success(orderImportService.preflight(readSheet(file), roundId));
+    }
+
+    /**
      * C20-4B 凭预览令牌确认入账。令牌一次性消费，既防重复点击确认，
      * 也防「看的是 A 文件、导的是 B 文件」。
+     *
+     * <p>C20-4C：预览中存在未归属行时本端点返回 409/40920 硬阻断，
+     * 且不消费令牌——运营补齐配置后仍可重新预览，或转而走排除入口。
      */
     @PostMapping("/orders/confirm")
     public ApiResponse<Map<String, Object>> confirmOrderImport(
             @RequestBody AdminRequests.OrderImportConfirmRequest request) {
         return ApiResponse.success(
                 orderImportService.confirm(request.getPreviewToken(), request.getOperatorId()));
+    }
+
+    /**
+     * C20-4C 确认入账并显式排除未归属订单。
+     *
+     * <p>运营需逐笔勾选子订单号并填写原因，服务层会校验勾选集合与预览未归属行
+     * 完全一致，并在入账<b>之前</b>写 operations_log。前端不得默认全选。
+     */
+    @PostMapping("/orders/confirm-override")
+    public ApiResponse<Map<String, Object>> confirmOrderImportWithOverride(
+            @RequestBody AdminRequests.OrderImportOverrideRequest request) {
+        return ApiResponse.success(orderImportService.confirmWithOverride(
+                request.getPreviewToken(), request.getOperatorId(),
+                request.getOverrideSubOrderNos(), request.getOverrideReason()));
     }
 
     /** C20-4B 查询商品原价配置。 */

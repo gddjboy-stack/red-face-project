@@ -161,6 +161,9 @@ public class OrderSheetParser {
         }
         if (!ORDER_STATUS_PAID.contains(orderStatus)) {
             // 未知状态一律不计入。宁可少算也不能凭猜测加分——加错分事后无法证明清白。
+            // C20-4C：另打 unknownOrderStatus 标记。「不认识的状态」与「确定无效」必须在预览里区分：
+            // 前者意味着可能存在平台新增状态而我们静默少算，后者是预期内的不计入。
+            r.setUnknownOrderStatus(true);
             r.setValidity(OrderRowParseResult.VALIDITY_INVALID);
             r.setInvalidReason("订单状态「" + orderStatus + "」不在已知的支付完成状态内，需人工确认");
             return;

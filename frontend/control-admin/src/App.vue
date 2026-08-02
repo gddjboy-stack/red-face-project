@@ -394,6 +394,262 @@
         </div>
       </el-tab-pane>
 
+      <!--
+        C20-4C 订单表批量导入。已完成并通过 22 项专项测试，但按 Claude 2026-08-02 裁定
+        「已完成但暂不启用，等待订单量上升后启用」——8/9 首场改走 C20-6 后台手工销量录入。
+        默认隐藏原因：防止运营在直播现场误入本流程。启用前置条件（不可跳过）：
+        必须先修复 players.display_code 无写入入口的缺陷，见
+        collaboration/已知缺陷_display_code无写入入口_V1.0.md。
+        启用方式：地址栏加 ?experimental=1，或将 showExperimental 默认值改为 true。
+      -->
+      <el-tab-pane v-if="showExperimental" label="订单导入（实验）" name="orders">
+        <el-alert
+          type="error"
+          :closable="false"
+          show-icon
+          title="实验功能，8/9 首场不使用"
+          class="mb-12"
+        >
+          本页为 C20-4C 订单表批量导入，已完成但<b>暂未启用</b>。启用前必须先修复
+          <code>players.display_code</code> 无写入入口的缺陷，否则每一行都会被判为未归属并阻断整批。
+          8/9 首场请使用「销量录入」页。
+        </el-alert>
+        <el-card class="panel-card">
+          <div class="panel-title">商品原价配置</div>
+          <p class="tip warning-text">
+            人气值按「单价配置 × 件数」计算，<b>不</b>用订单实付金额。
+            未配置原价的商家编码会被判为未归属并<b>阻止整批入账</b>，请在开场前配齐。
+          </p>
+          <el-form @submit.prevent :inline="true">
+            <el-form-item label="商家编码">
+              <el-input v-model="priceForm.merchantCode" placeholder="如 P12" style="width: 130px" />
+            </el-form-item>
+            <el-form-item label="商品名">
+              <el-input v-model="priceForm.productName" placeholder="如 明信片标准款" style="width: 190px" />
+            </el-form-item>
+            <el-form-item label="单价（元）">
+              <el-input v-model="priceForm.unitPriceYuan" placeholder="19.9" style="width: 110px" />
+            </el-form-item>
+            <el-form-item label="状态">
+              <el-select v-model="priceForm.status" style="width: 120px">
+                <el-option label="active" value="active" />
+                <el-option label="disabled" value="disabled" />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-button native-type="button" type="primary" @click="submitProductPrice">保存原价</el-button>
+              <el-button native-type="button" @click="refreshProductPrices">刷新</el-button>
+            </el-form-item>
+          </el-form>
+          <el-table :data="productPrices" size="small" max-height="200">
+            <el-table-column prop="merchantCode" label="商家编码" width="120" />
+            <el-table-column prop="productName" label="商品名" />
+            <el-table-column label="单价" width="120">
+              <template #default="scope">{{ yuan(scope.row.unitPriceCent) }}</template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="100" />
+          </el-table>
+        </el-card>
+
+        <el-card class="panel-card">
+          <div class="panel-title">上传订单表</div>
+          <p class="tip">
+            支持抖店导出的 xlsx / csv。两个入口的区别：<b>前置检查</b>只校验不落库、不产生确认按钮，
+            用于赛前空跑；<b>上传并预览</b>会生成一次性确认令牌，用于正式入账。
+          </p>
+          <el-form @submit.prevent :inline="true">
+            <el-form-item label="轮次">
+              <el-select v-model="orderImportRoundId" clearable placeholder="选轮次" style="width: 200px">
+                <el-option v-for="r in rounds" :key="r.roundId" :label="`${r.roundId} ${r.name}`" :value="r.roundId" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="订单文件">
+              <input type="file" accept=".xlsx,.xls,.csv" @change="onOrderFileChange" />
+            </el-form-item>
+            <el-form-item>
+              <el-button native-type="button" @click="runPreflight" :loading="orderLoading">前置检查（不入账）</el-button>
+              <el-button native-type="button" type="primary" @click="runPreview" :loading="orderLoading">上传并预览</el-button>
+            </el-form-item>
+          </el-form>
+          <el-alert v-if="orderPreviewIsPreflight" type="info" :closable="false" show-icon
+                   title="当前为前置检查结果：未生成确认令牌，不可入账。正式导入请点「上传并预览」" />
+        </el-card>
+
+        <template v-if="orderPreview">
+          <el-card class="panel-card">
+            <div class="panel-title">预览汇总</div>
+            <el-alert v-for="err in orderPreview.blockingErrors" :key="err" type="error" :closable="false"
+                     show-icon :title="err" style="margin-bottom: 8px" />
+            <el-alert v-if="orderPreview.blockedByUnattributed" type="error" :closable="false" show-icon
+                     :title="orderPreview.blockReason || '存在未归属订单，已阻止入账'" style="margin-bottom: 8px" />
+            <el-alert v-for="w in orderPreview.warnings" :key="w" type="warning" :closable="false"
+                     show-icon :title="w" style="margin-bottom: 8px" />
+            <div class="metric-row">
+              <div class="metric-box">
+                <div class="metric-label">总行数</div>
+                <div class="metric-number">{{ orderPreview.totalRows }}</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">有效行</div>
+                <div class="metric-number">{{ orderPreview.validRows }}</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">无效行</div>
+                <div class="metric-number">{{ orderPreview.invalidRows }}</div>
+              </div>
+              <div class="metric-box metric-danger">
+                <div class="metric-label">未归属行</div>
+                <div class="metric-number">{{ orderPreview.unattributedRows }}</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">已入账重复</div>
+                <div class="metric-number">{{ orderPreview.duplicateRows }}</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">合计件数</div>
+                <div class="metric-number">{{ orderPreview.totalQuantity }}</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">合计人气值</div>
+                <div class="metric-number">{{ orderPreview.totalPopularity }}</div>
+              </div>
+              <div class="metric-box metric-warn">
+                <div class="metric-label">售后中敲口</div>
+                <div class="metric-number">{{ orderPreview.aftersaleExposure }}</div>
+              </div>
+              <div class="metric-box metric-warn">
+                <div class="metric-label">未知状态行</div>
+                <div class="metric-number">{{ orderPreview.unknownStatusRows }}</div>
+              </div>
+            </div>
+          </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">按选手汇总核对</div>
+            <p class="tip">
+              确认前请逐行核对。<b>件数</b>与<b>人气值</b>并列的目的是：人气值偏高时，
+              看件数就能判断是「真的卖得多」还是「单价配错了」。
+            </p>
+            <el-table :data="orderPreview.byPlayerDetail" size="small" max-height="320">
+              <el-table-column prop="merchantCode" label="商家编码" width="120" />
+              <el-table-column label="选手" width="150">
+                <template #default="scope">
+                  <span v-if="scope.row.playerName">{{ scope.row.playerName }}</span>
+                  <span v-else class="warning-text">（未查到姓名）</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="validRows" label="笔数" width="90" />
+              <el-table-column prop="quantity" label="件数" width="90" />
+              <el-table-column label="单价" width="110">
+                <template #default="scope">{{ yuan(scope.row.unitPriceCent) }}</template>
+              </el-table-column>
+              <el-table-column prop="popularityValue" label="人气值" width="130" />
+              <el-table-column label="售后中敲口" width="150">
+                <template #default="scope">
+                  <span v-if="scope.row.aftersaleRows > 0" class="warning-text">
+                    {{ scope.row.aftersaleRows }} 笔 / {{ scope.row.aftersaleExposure }}
+                  </span>
+                  <span v-else>-</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-card>
+
+          <el-card v-if="unattributedRowList.length > 0" class="panel-card">
+            <div class="panel-title">未归属订单（已阻止入账）</div>
+            <p class="tip warning-text">
+              这些订单<b>不会计入任何选手的人气值</b>。首选做法是补齐上方商品原价配置后重新上传预览；
+              确定无需计入时，必须逐笔勾选并填写原因，系统会记录操作人与原因。
+            </p>
+            <el-table :data="unattributedRowList" size="small" max-height="300"
+                      @selection-change="onOverrideSelectionChange" ref="unattributedTableRef">
+              <el-table-column type="selection" width="48" />
+              <el-table-column prop="rowNumber" label="行号" width="80" />
+              <el-table-column prop="subOrderNo" label="子订单号" width="190" />
+              <el-table-column prop="merchantCode" label="商家编码" width="120" />
+              <el-table-column prop="quantity" label="件数" width="80" />
+              <el-table-column prop="invalidReason" label="未归属原因" />
+            </el-table>
+            <el-form @submit.prevent label-width="90px" style="margin-top: 12px">
+              <el-form-item label="排除原因">
+                <el-input v-model="overrideReason" type="textarea" :rows="2"
+                          placeholder="必填。例：该编号为测试商品，经 Vincent 确认不计入本场人气" />
+              </el-form-item>
+              <p class="tip">
+                已勾选 {{ overrideSelection.length }} / {{ unattributedRowList.length }} 笔。
+                必须全部勾选才能提交——否则未勾选的那几笔会被无声排除。
+              </p>
+              <div class="form-actions">
+                <el-button native-type="button" @click="selectAllUnattributed">全选（逐笔核对后）</el-button>
+                <el-button native-type="button" type="danger" :disabled="!canSubmitOverride"
+                           :loading="orderLoading" @click="submitConfirmOverride">
+                  确认并排除未归属订单
+                </el-button>
+              </div>
+            </el-form>
+          </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">逐行明细</div>
+            <el-radio-group v-model="orderRowFilter" size="small" style="margin-bottom: 10px">
+              <el-radio-button label="all">全部 {{ orderPreview.rows.length }}</el-radio-button>
+              <el-radio-button label="valid">有效 {{ orderPreview.validRows }}</el-radio-button>
+              <el-radio-button label="invalid">无效 {{ orderPreview.invalidRows }}</el-radio-button>
+              <el-radio-button label="unattributed">未归属 {{ orderPreview.unattributedRows }}</el-radio-button>
+              <el-radio-button label="aftersale">售后中 {{ orderPreview.aftersaleRows }}</el-radio-button>
+            </el-radio-group>
+            <el-table :data="filteredOrderRows" size="small" max-height="420">
+              <el-table-column prop="rowNumber" label="行号" width="70" />
+              <el-table-column prop="subOrderNo" label="子订单号" width="180" />
+              <el-table-column prop="merchantCode" label="编码" width="90" />
+              <el-table-column label="选手" width="110">
+                <template #default="scope">{{ scope.row.playerName || '-' }}</template>
+              </el-table-column>
+              <el-table-column prop="quantity" label="件数" width="70" />
+              <el-table-column prop="orderStatus" label="订单状态" width="110" />
+              <el-table-column prop="aftersaleStatus" label="售后状态" width="110" />
+              <el-table-column label="判定" width="110">
+                <template #default="scope">
+                  <el-tag size="small" :type="validityTagType(scope.row.validity)">
+                    {{ validityLabel(scope.row.validity) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="popularityValue" label="人气值" width="110" />
+              <el-table-column prop="invalidReason" label="原因" min-width="220" />
+            </el-table>
+          </el-card>
+
+          <el-card class="panel-card">
+            <div class="panel-title">确认入账</div>
+            <p class="tip">
+              令牌一次性消费：确认后需重新上传才能再导。这道限制同时防重复点击与「看的是 A 文件、导的是 B 文件」。
+            </p>
+            <div class="form-actions">
+              <el-button native-type="button" type="primary" :disabled="!canConfirmImport"
+                         :loading="orderLoading" @click="submitConfirmImport">确认入账</el-button>
+            </div>
+            <p v-if="orderPreview.blockedByUnattributed" class="tip warning-text">
+              存在未归属订单，普通确认已停用。请补齐配置后重新预览，或在上方逐笔勾选后走排除入口。
+            </p>
+          </el-card>
+
+          <el-card v-if="orderImportResult" class="panel-card">
+            <div class="panel-title">入账结果</div>
+            <p>{{ orderImportResult.message }}</p>
+            <p class="tip">批次号：{{ orderImportResult.importBatchId }}</p>
+            <el-alert v-if="orderImportResult.overriddenRows > 0" type="warning" :closable="false" show-icon
+                     :title="`本次按运营确认排除 ${orderImportResult.overriddenRows} 笔未归属订单，已记入操作日志`" />
+            <div v-if="orderImportResult.failures && orderImportResult.failures.length > 0">
+              <p class="tip warning-text">以下行入账失败，需单独补录：</p>
+              <ul class="tip">
+                <li v-for="f in orderImportResult.failures" :key="f">{{ f }}</li>
+              </ul>
+            </div>
+          </el-card>
+        </template>
+      </el-tab-pane>
+
       <el-tab-pane label="写真管理" name="photos">
         <div class="grid-two">
           <el-card class="panel-card">
@@ -489,15 +745,35 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { distributeTeam, getAdminBoard, getAdminHome, getGroupVoteSummary, getSuspicionStatus, manualAdjust, recordGroupVote, setCollectState, simulateInject } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
 import { generateTokens, exportTokens } from './api/tokens'
+import {
+  confirmOrderImport,
+  confirmOrderImportWithOverride,
+  listProductPrices,
+  preflightOrderImport,
+  previewOrderImport,
+  saveProductPrice,
+  type OrderImportPreview,
+  type OrderRow
+} from './api/orders'
 import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
+
+/**
+ * 实验功能开关。C20-4C 订单导入已完成但按 Claude 2026-08-02 裁定暂不启用，
+ * 默认隐藏以防运营在 8/9 直播现场误入该流程。
+ * 需要验证或演示时，在地址栏追加 ?experimental=1 即可显示。
+ * 注意：这只是防误入的界面开关，不构成权限控制——后端接口依旧可被直接调用。
+ */
+const showExperimental = ref(
+  new URLSearchParams(window.location.search).get('experimental') === '1'
+)
 const operatorId = ref(localStorage.getItem('operatorId') || 'director')
 const adminToken = ref(getAdminToken())
 
@@ -927,6 +1203,8 @@ onMounted(async () => {
   await refreshPhotos()
   await refreshMonitor()
   await refreshGroupVoteSummary()
+  // 商品原价列表预先加载：运营开场前第一件事就是确认配价是否齐全。
+  await refreshProductPrices()
 })
 
 async function onTokenPlayerChange() {
@@ -970,6 +1248,224 @@ async function downloadCsv() {
     await exportTokens(lastBatchId.value, operatorId.value)
   } catch (e: any) {
     ElMessage.error(e.message || '下载失败')
+  }
+}
+
+// ===================== C20-4C 订单导入 =====================
+
+const productPrices = ref<any[]>([])
+const priceForm = reactive({
+  merchantCode: '',
+  productName: '',
+  unitPriceYuan: '',
+  status: 'active'
+})
+const orderFile = ref<File | null>(null)
+const orderImportRoundId = ref<number | null>(null)
+const orderPreview = ref<OrderImportPreview | null>(null)
+/** 当前展示的结果是否来自前置检查。空跑结果必须在界面上自标识，
+ *  否则运营会误以为已经导入过一次。 */
+const orderPreviewIsPreflight = ref(false)
+const orderImportResult = ref<any>(null)
+const orderLoading = ref(false)
+const orderRowFilter = ref('all')
+const overrideSelection = ref<OrderRow[]>([])
+const overrideReason = ref('')
+const unattributedTableRef = ref<any>(null)
+
+/** 分转元展示。全链路以分为单位做整数运算，仅在展示层除 100。 */
+function yuan(cent: number | null | undefined): string {
+  if (cent === null || cent === undefined) return '-'
+  return `¥${(cent / 100).toFixed(2)}`
+}
+
+function validityLabel(validity: string): string {
+  if (validity === 'valid') return '有效'
+  if (validity === 'unattributed') return '未归属'
+  return '无效'
+}
+
+function validityTagType(validity: string): string {
+  if (validity === 'valid') return 'success'
+  if (validity === 'unattributed') return 'danger'
+  return 'info'
+}
+
+const unattributedRowList = computed<OrderRow[]>(() => {
+  if (!orderPreview.value) return []
+  return orderPreview.value.rows.filter((r) => r.validity === 'unattributed')
+})
+
+const filteredOrderRows = computed<OrderRow[]>(() => {
+  if (!orderPreview.value) return []
+  const rows = orderPreview.value.rows
+  if (orderRowFilter.value === 'valid') return rows.filter((r) => r.validity === 'valid')
+  if (orderRowFilter.value === 'invalid') return rows.filter((r) => r.validity === 'invalid')
+  if (orderRowFilter.value === 'unattributed') return rows.filter((r) => r.validity === 'unattributed')
+  if (orderRowFilter.value === 'aftersale') return rows.filter((r) => r.inAftersale)
+  return rows
+})
+
+/** 普通确认只在无阻断且持有令牌时可用。前端先置灰是为了少一次无效点击，
+ *  但真正的阻断在后端（409/40920）——前端置灰可被绕过，不能当作保障。 */
+const canConfirmImport = computed(() => {
+  const p = orderPreview.value
+  if (!p || !p.previewToken) return false
+  if (p.blockingErrors.length > 0) return false
+  return !p.blockedByUnattributed
+})
+
+/** 排除提交要求：持有令牌、已填原因、且未归属行<b>全部</b>勾选。 */
+const canSubmitOverride = computed(() => {
+  const p = orderPreview.value
+  if (!p || !p.previewToken) return false
+  if (unattributedRowList.value.length === 0) return false
+  if (!overrideReason.value.trim()) return false
+  return overrideSelection.value.length === unattributedRowList.value.length
+})
+
+function onOrderFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  orderFile.value = input.files && input.files.length > 0 ? input.files[0] : null
+  // 换文件必须作废旧预览：否则屏幕上是 A 文件的数字、手里是 B 文件的令牌。
+  resetOrderPreview()
+}
+
+function resetOrderPreview() {
+  orderPreview.value = null
+  orderPreviewIsPreflight.value = false
+  orderImportResult.value = null
+  overrideSelection.value = []
+  overrideReason.value = ''
+  orderRowFilter.value = 'all'
+}
+
+async function refreshProductPrices() {
+  try {
+    productPrices.value = await listProductPrices()
+  } catch (e: any) {
+    ElMessage.error(e.message || '加载商品原价失败')
+  }
+}
+
+async function submitProductPrice() {
+  if (!priceForm.merchantCode.trim() || !priceForm.unitPriceYuan.trim()) {
+    ElMessage.error('商家编码与单价必填')
+    return
+  }
+  try {
+    await saveProductPrice({
+      merchantCode: priceForm.merchantCode.trim(),
+      productName: priceForm.productName.trim(),
+      unitPriceYuan: priceForm.unitPriceYuan.trim(),
+      status: priceForm.status,
+      operatorId: operatorId.value
+    })
+    ElMessage.success('原价已保存（仅影响此后导入，已入账订单不追溯）')
+    await refreshProductPrices()
+  } catch (e: any) {
+    ElMessage.error(e.message || '保存失败')
+  }
+}
+
+async function runPreflight() {
+  if (!orderFile.value) {
+    ElMessage.error('请先选择订单文件')
+    return
+  }
+  orderLoading.value = true
+  try {
+    resetOrderPreview()
+    orderPreview.value = await preflightOrderImport(orderFile.value, orderImportRoundId.value)
+    orderPreviewIsPreflight.value = true
+    ElMessage.success('前置检查完成：未写入任何数据')
+  } catch (e: any) {
+    ElMessage.error(e.message || '前置检查失败')
+  } finally {
+    orderLoading.value = false
+  }
+}
+
+async function runPreview() {
+  if (!orderFile.value) {
+    ElMessage.error('请先选择订单文件')
+    return
+  }
+  orderLoading.value = true
+  try {
+    resetOrderPreview()
+    orderPreview.value = await previewOrderImport(orderFile.value, orderImportRoundId.value)
+    orderPreviewIsPreflight.value = false
+    if (orderPreview.value.blockedByUnattributed) {
+      ElMessage.warning('存在未归属订单，已阻止普通确认入账')
+    } else {
+      ElMessage.success('预览完成，请按选手汇总核对后确认')
+    }
+  } catch (e: any) {
+    ElMessage.error(e.message || '预览失败')
+  } finally {
+    orderLoading.value = false
+  }
+}
+
+function onOverrideSelectionChange(rows: OrderRow[]) {
+  overrideSelection.value = rows
+}
+
+function selectAllUnattributed() {
+  const table = unattributedTableRef.value
+  if (!table) return
+  unattributedRowList.value.forEach((row) => table.toggleRowSelection(row, true))
+}
+
+async function submitConfirmImport() {
+  const p = orderPreview.value
+  if (!p || !p.previewToken) return
+  await ElMessageBox.confirm(
+    `将为 ${p.byPlayerDetail.length} 位选手计入合计 ${p.totalPopularity} 人气值（${p.totalQuantity} 件）。确认后令牌失效，不可重复导入。`,
+    '确认入账',
+    { type: 'warning' }
+  )
+  orderLoading.value = true
+  try {
+    orderImportResult.value = await confirmOrderImport({
+      previewToken: p.previewToken,
+      operatorId: operatorId.value
+    })
+    ElMessage.success('入账完成')
+    // 令牌已消费，立即作废预览以防重复点击
+    orderPreview.value = null
+    await refreshProductPrices()
+  } catch (e: any) {
+    ElMessage.error(e.message || '入账失败')
+  } finally {
+    orderLoading.value = false
+  }
+}
+
+async function submitConfirmOverride() {
+  const p = orderPreview.value
+  if (!p || !p.previewToken) return
+  const subOrderNos = unattributedRowList.value.map((r) => r.subOrderNo)
+  await ElMessageBox.confirm(
+    `将排除 ${subOrderNos.length} 笔未归属订单（不计入任何选手人气），并将操作人与原因写入操作日志。此操作不可撤回。`,
+    '确认排除未归属订单',
+    { type: 'warning' }
+  )
+  orderLoading.value = true
+  try {
+    orderImportResult.value = await confirmOrderImportWithOverride({
+      previewToken: p.previewToken,
+      operatorId: operatorId.value,
+      overrideSubOrderNos: subOrderNos,
+      overrideReason: overrideReason.value.trim()
+    })
+    ElMessage.success('已入账并留痕')
+    orderPreview.value = null
+  } catch (e: any) {
+    ElMessage.error(e.message || '排除入账失败')
+  } finally {
+    orderLoading.value = false
   }
 }
 </script>
