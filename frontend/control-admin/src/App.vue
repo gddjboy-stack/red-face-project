@@ -133,8 +133,54 @@
             </el-form>
           </el-card>
 
-          <el-card class="panel-card">
-            <div class="panel-title">模拟注入</div>
+          <!-- C20-9 直播数据录入：运营填中控台看到的累计总数，系统自算增量 -->
+          <el-card class="panel-card" style="grid-column: 1 / -1;">
+            <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>直播数据录入（填中控台累计总数）</span>
+              <div>
+                <el-button type="primary" size="small" @click="doCalibrate">{{ calibCopy.actionLabel || '开始新一场直播（校准中控台读数）' }}</el-button>
+                <el-button type="warning" size="small" plain @click="doRevokeCalibration">撤销校准</el-button>
+              </div>
+            </div>
+            <p class="tip">
+              直接填抖音中控台上看到的<b>当前累计总数</b>，不要自己算差值。系统减去上次总数得到本次增量。
+              每场开播前先点一次「开始新一场直播」，它只重置读数基准，<b>不会改变任何选手的人气值</b>。
+            </p>
+            <el-table :data="metricRows" size="small" style="width: 100%">
+              <el-table-column prop="label" label="数据来源" width="150" />
+              <el-table-column label="上次录入总数" width="130">
+                <template #default="{ row }">{{ (watermarkOf(row.metricType)?.lastTotal ?? 0).toLocaleString() }}</template>
+              </el-table-column>
+              <el-table-column label="本次中控台总数" width="210">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.currentTotal" :min="0" :controls="false" style="width: 150px"
+                    :disabled="row.metricType === 'gift' && !giftAttributable" @change="onMetricInput(row)" />
+                </template>
+              </el-table-column>
+              <el-table-column label="本次增量预览">
+                <template #default="{ row }">
+                  <span v-if="row.metricType === 'gift' && !giftAttributable" class="tip" style="color: #e6a23c;">
+                    礼物按总数录入需当前场控已指定目标选手（当前为{{ collectModeText }}模式）
+                  </span>
+                  <span v-else-if="row.previewText" :class="row.previewWarn ? 'warning-text' : ''">{{ row.previewText }}</span>
+                  <span v-else class="tip">填入总数后自动预览</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="已录入笔数" width="100">
+                <template #default="{ row }">{{ watermarkOf(row.metricType)?.entryCount ?? 0 }}</template>
+              </el-table-column>
+            </el-table>
+            <div class="form-actions">
+              <el-button native-type="button" type="primary" @click="submitMetricRows">提交录入</el-button>
+              <el-button native-type="button" @click="refreshWatermarks">刷新读数</el-button>
+            </div>
+          </el-card>
+
+          <!-- C20-9：模拟注入是开发验证工具，语义与「直播数据录入」相反（前者填增量、后者填累计）。
+               两者并列时运营极容易误用，故隐到 ?experimental=1 后面。 -->
+          <el-card class="panel-card" v-if="showExperimental">
+            <div class="panel-title">模拟注入<el-tag type="danger" size="small" style="margin-left: 8px">开发验证专用</el-tag></div>
+            <p class="tip warning-text">此处填的是<b>增量</b>，不是累计总数。直播现场请用上方「直播数据录入」。</p>
             <el-form @submit.prevent label-width="100px">
               <el-form-item label="事件类型">
                 <el-select v-model="simulateForm.eventType">
@@ -936,7 +982,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { distributeTeam, getAdminBoard, getAdminHome, getGroupVoteSummary, getSuspicionStatus, manualAdjust, recordGroupVote, setCollectState, simulateInject } from './api/admin'
+import { calibrateWatermarks, distributeTeam, getAdminBoard, getAdminHome, getCalibrationCopy, getGroupVoteSummary, getLiveWatermarks, getSuspicionStatus, manualAdjust, previewMetricEntry, recordGroupVote, revokeCalibration, setCollectState, simulateInject, submitMetricEntry } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
 import { generateTokens, exportTokens } from './api/tokens'
@@ -957,7 +1003,7 @@ import {
   type ManualSalesEntryResult,
   type ManualSalesSummary
 } from './api/sales'
-import { getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
+import { ApiError, getAdminToken, setAdminToken, clearAdminToken, setUnauthorizedHandler } from './api/http'
 
 const activeTab = ref('monitor')
 
@@ -1184,8 +1230,218 @@ async function submitCollectState() {
     return
   }
   await ElMessageBox.confirm('确认切换当前集赞目标？该操作会影响点赞/留言归属。', '二次确认', { type: 'warning' })
+  /* C20-9 切换前预检：礼物水位线是全场累计、不区分选手，切换目标后下一笔录入
+     会把前一个归属期间累积的音浪一并计给新目标。
+     判断条件与后端 LiveWatermarkService.buildTargetSwitchWarning 同源，
+     后端若调整阈值需同步。后端切换成功后返回的 message 提示保留，两者并存。 */
+  await warnGiftBeforeTargetSwitch()
   const payload = { ...collectForm, targetId: collectForm.mode === 'pool' ? null : collectForm.targetId }
   await runAction('集赞目标已切换', () => setCollectState(withOperator(payload)), refreshMonitor)
+}
+
+/**
+ * C20-9 切换集赞目标前的礼物水位线预检。
+ *
+ * 与后端 `LiveWatermarkService.buildTargetSwitchWarning` **同源**：
+ * 当礼物水位线已有录入笔数（entryCount > 0）且最近一笔距今不足 3 分钟时，
+ * 切换目标意味着下一笔会把上一个归属期内的音浪一并计给新目标。
+ * **后端若调整判断阈值，此处需同步。**
+ *
+ * 为何前端再做一次：后端是切换**成功后**把警告拼在返回里，
+ * 而这个风险需要在切换**之前**拦住才有意义。
+ */
+async function warnGiftBeforeTargetSwitch() {
+  try {
+    if (!watermarks.value.length) watermarks.value = await getLiveWatermarks()
+  } catch {
+    return
+  }
+  const gift = watermarks.value.find((w) => w.metricType === 'gift')
+  if (!gift || !gift.entryCount) return
+  const minutes = gift.updatedAt
+    ? (Date.now() - new Date(gift.updatedAt).getTime()) / 60000
+    : 999
+  if (minutes >= 3) return
+  await ElMessageBox.confirm(
+    `礼物水位线已录入 ${gift.entryCount} 笔，最近一笔在 ${minutes.toFixed(1)} 分钟前。<br/><br/>` +
+      '抖音中控台的音浪是<b>全场累计、不区分选手</b>的。现在切换目标，' +
+      '下一笔录入会把切换前这段时间累积的音浪<b>一并计给新目标</b>。<br/><br/>' +
+      '建议：先把当前目标的音浪录入完毕，再切换。',
+    '切换前请确认音浪已录完',
+    { dangerouslyUseHTMLString: true, type: 'warning', confirmButtonText: '我已录完，继续切换', cancelButtonText: '取消' }
+  )
+}
+
+/* ==================== C20-9 直播数据录入与场次校准 ==================== */
+
+/** 校准文案由后端下发，前端不得自行改写（防止「清零」等危险措辞复活）。 */
+const calibCopy = ref<Record<string, string>>({})
+const watermarks = ref<any[]>([])
+
+/** 三行录入。metricType 必须与后端 LiveWatermarkService 常量逐字一致。 */
+const metricRows = reactive<any[]>([
+  { metricType: 'like_delta', label: '点赞', currentTotal: null, previewText: '', previewWarn: false, idemKey: newIdempotencyKey() },
+  { metricType: 'comment_delta', label: '评论', currentTotal: null, previewText: '', previewWarn: false, idemKey: newIdempotencyKey() },
+  { metricType: 'gift', label: '音浪（礼物）', currentTotal: null, previewText: '', previewWarn: false, idemKey: newIdempotencyKey() }
+])
+
+function watermarkOf(metricType: string) {
+  return watermarks.value.find((w) => w.metricType === metricType)
+}
+
+/**
+ * 礼物能否按总数录入，取决于当前场控模式是否指向唯一选手。
+ * 与后端 LiveMetricEntryService.requireGiftAttributableCollect 同源，
+ * 后端若调整可接受的模式集合，此处需同步。
+ */
+const giftAttributable = computed(() => {
+  const mode = home.value?.currentMode
+  return (mode === 'player' || mode === 'spy') && home.value?.targetId != null
+})
+const collectModeText = computed(() => {
+  const map: Record<string, string> = { player: '选手', team: '团队', spy: '卧底', pool: '总池', none: '未设定' }
+  return map[home.value?.currentMode] || home.value?.currentMode || '未设定'
+})
+
+async function refreshWatermarks() {
+  watermarks.value = await getLiveWatermarks()
+  if (!calibCopy.value.actionLabel) {
+    calibCopy.value = await getCalibrationCopy()
+  }
+}
+
+/**
+ * 填完就预览，不用等提交。运营在敲错数字的那一秒就能看到异常增量。
+ * 同时按 Claude 裁定：表单内容变更则重新生成幂等键（防连点，但允许改数重提）。
+ */
+async function onMetricInput(row: any) {
+  row.idemKey = newIdempotencyKey()
+  if (row.currentTotal == null) {
+    row.previewText = ''
+    row.previewWarn = false
+    return
+  }
+  try {
+    const p = await previewMetricEntry(row.metricType, row.currentTotal)
+    row.previewWarn = !!p.needsCalibration
+    row.previewText = p.needsCalibration
+      ? `${p.message || '本次总数小于上次'}（上次 ${p.lastTotal.toLocaleString()} → 本次 ${p.currentTotal.toLocaleString()}）`
+      : `本次增量 ${p.delta.toLocaleString()}`
+  } catch (error: any) {
+    row.previewWarn = true
+    row.previewText = error.message || '预览失败'
+  }
+}
+
+/**
+ * 逐行提交。三行不包在一个事务里，因此**必须逐行回显成败**，
+ * 绝不能只报一句「提交失败」——那会让运营把已入账的那几行再提一次，造成重复计数。
+ */
+async function submitMetricRows() {
+  const filled = metricRows.filter((r) => r.currentTotal != null)
+  if (!filled.length) {
+    ElMessage.warning('请至少填入一行中控台总数')
+    return
+  }
+  // 礼物有值但归属不成立：提交前就问清楚，不要让它跑到后端报错。
+  let rows = filled
+  const giftRow = filled.find((r) => r.metricType === 'gift')
+  if (giftRow && !giftAttributable.value) {
+    const others = filled.filter((r) => r.metricType !== 'gift')
+    if (!others.length) {
+      ElMessage.warning(`当前场控为${collectModeText.value}模式，礼物无法按总数入账，请先切换场控目标`)
+      return
+    }
+    await ElMessageBox.confirm(
+      `当前场控为${collectModeText.value}模式，礼物无法按总数入账，是否仅提交点赞与评论？`,
+      '礼物归属不成立',
+      { type: 'warning', confirmButtonText: '仅提交点赞与评论', cancelButtonText: '取消' }
+    )
+    rows = others
+  }
+  const done: string[] = []
+  const failed: string[] = []
+  for (const row of rows) {
+    try {
+      const outcome = await submitOneMetric(row)
+      if (outcome === 'skipped') continue
+      // 回显「本次实际入账增量」而非预览值：预览与提交之间水位线可能已被更新。
+      done.push(`${row.label} +${(outcome.delta ?? 0).toLocaleString()}`)
+      row.currentTotal = null
+      row.previewText = ''
+      row.previewWarn = false
+    } catch (error: any) {
+      failed.push(`${row.label}：${error.message || '失败'}`)
+    }
+  }
+  if (done.length) ElMessage.success(`已入账 ${done.join('、')}`)
+  if (failed.length) {
+    ElMessageBox.alert(
+      `以下各行未入账：<br/>${failed.join('<br/>')}` +
+        (done.length ? `<br/><br/>已成功入账的行：${done.join('、')}（请勿重复提交）` : ''),
+      '逐行结果',
+      { dangerouslyUseHTMLString: true, type: 'warning' }
+    )
+  }
+  await refreshWatermarks()
+  await refreshMonitor()
+}
+
+/** 单行提交。遭遇 40910 时展示上次与本次对照，由人判断是否新场次。 */
+async function submitOneMetric(row: any): Promise<any | 'skipped'> {
+  const payload = withOperator({
+    metricType: row.metricType,
+    currentTotal: row.currentTotal,
+    idempotencyKey: row.idemKey,
+    reason: '直播数据录入'
+  })
+  try {
+    return await submitMetricEntry(payload)
+  } catch (error: any) {
+    // 40910：本次总数小于水位线，后端未写入任何数据。
+    // 靠 http.ts 附加的 code 与 data 取到 lastTotal / currentTotal 对照。
+    const preview: any = error instanceof ApiError && error.code === 40910 ? error.data : null
+    if (!preview) throw error
+    const last = (preview.lastTotal ?? 0).toLocaleString()
+    const cur = (preview.currentTotal ?? row.currentTotal).toLocaleString()
+    await ElMessageBox.confirm(
+      `【${row.label}】本次填入 ${cur}，小于上次录入的 ${last}。<br/><br/>` +
+        `<b>这一笔尚未入账。</b>若确定是新一场直播开播（中控台读数从 0 重新开始），` +
+        `请先点「开始新一场直播（校准中控台读数）」再录入；若是填错了数字，请取消后改正。`,
+      '本次总数小于上次',
+      {
+        dangerouslyUseHTMLString: true,
+        type: 'warning',
+        confirmButtonText: '我知道了，先不录入',
+        cancelButtonText: '取消'
+      }
+    ).catch(() => {})
+    return 'skipped'
+  }
+}
+
+/** 校准：二次确认文案用后端下发的原文，它已写明不会改变任何选手的人气值。 */
+async function doCalibrate() {
+  if (!calibCopy.value.confirmMessage) calibCopy.value = await getCalibrationCopy()
+  await ElMessageBox.confirm(calibCopy.value.confirmMessage, '二次确认', {
+    type: 'warning',
+    confirmButtonText: '确认开始新一场',
+    cancelButtonText: '取消'
+  })
+  await runAction(calibCopy.value.successMessage || '已校准中控台读数', () =>
+    calibrateWatermarks(withOperator({ reason: '新一场直播开播' })), refreshWatermarks)
+}
+
+/** 撤销校准：误点后的第一件事。仅在校准后尚未录入时可用。 */
+async function doRevokeCalibration() {
+  await ElMessageBox.confirm(
+    '撤销最近一次校准，把中控台读数基准恢复到校准前。<br/>' +
+      '<b>仅在校准后尚未录入新数据时可用</b>——已经录过就要人工核算，所以误点后请立即撤销，不要先去录数。',
+    '撤销校准',
+    { dangerouslyUseHTMLString: true, type: 'warning', confirmButtonText: '确认撤销', cancelButtonText: '取消' }
+  )
+  await runAction(calibCopy.value.revokeSuccessMessage || '已撤销校准', () =>
+    revokeCalibration(withOperator({ reason: '误点校准撤销' })), refreshWatermarks)
 }
 
 async function submitSimulate() {
@@ -1398,6 +1654,12 @@ onMounted(async () => {
   }
   await refreshPhotos()
   await refreshMonitor()
+  // C20-9：开播前运营需先看到三条水位线现状，否则无法判断是否需要校准。
+  try {
+    await refreshWatermarks()
+  } catch (error: any) {
+    ElMessage.warning('水位线读数加载失败：' + (error.message || '未知错误'))
+  }
   await refreshGroupVoteSummary()
   // 商品原价列表预先加载：运营开场前第一件事就是确认配价是否齐全。
   await refreshProductPrices()

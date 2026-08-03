@@ -222,6 +222,7 @@ body{
     <div class="round"><span class="live-dot" id="liveDot"></span><span id="roundText">—</span></div>
     <div class="top-right">
       <button class="btn" id="tabBtn">切到 团队榜</button>
+      <button class="btn" id="fsBtn">全屏</button>
       <button class="btn" id="shareBtn">生成分享图</button>
       <button class="btn" id="logoutBtn">退出</button>
     </div>
@@ -232,6 +233,7 @@ body{
   <div class="foot">
     <span id="updateText">—</span><span class="err" id="errText"></span>
     <span class="right">
+      <span class="hint" id="zeroHint"></span>
       <span class="hint" id="scrollHint"></span>
       <span id="pageTag"></span>
     </span>
@@ -392,6 +394,10 @@ function render(){
   var max=0;
   for(var k=0;k<state.items.length;k++){ if(state.items[k].value>max)max=state.items[k].value; }
   state.maxValue=max;
+  /* C20-9：全 0 时必须明说「暂未产生人气数据」。
+     否则画面是「有名次、有名字、柱子全空、数字全 0」，
+     与「系统挂了 / 数据没传上来」在观众和运营眼里完全无法区分。 */
+  $('zeroHint').textContent = max===0 ? '本轮暂未产生人气数据' : '';
 
   var html='';
   for(var i=0;i<state.items.length;i++){
@@ -422,7 +428,16 @@ function autoScroll(){
   if(over<=4){$('pageTag').textContent='';return;}
   var step=Math.max(sc.clientHeight*0.8,120);
   var next=sc.scrollTop+step;
-  if(next>=over-2)next=0;          // 到底回到顶部，循环展示
+  /* C20-9 修复末屏永不展示：
+     旧写法 if(next>=over-2)next=0 把「下一步会超出」直接当成「已经到底」，
+     于 step > over 时（如 12 人榜 step=787、over=240）首次翻屏即归零，
+     末尾名次一整场都不会出现在观众眼前。
+     正确语义分两步：先夹到底部完整停一屏，已经在底部了才回到顶部。 */
+  if(sc.scrollTop>=over-2){
+    next=0;                        // 已停在底部一整屏，回到顶部重新循环
+  }else if(next>over){
+    next=over;                     // 下一步会超出，先夹到底部把末屏完整展示一轮
+  }
   sc.scrollTop=next;
   updatePageTag();
 }
@@ -562,8 +577,37 @@ $('logoutBtn').addEventListener('click',function(){
   fetch('/api/display-auth/logout',{method:'POST',credentials:'same-origin'})
     .catch(function(){}).then(function(){backToGate('已退出展示');});
 });
+
+/* ---------- C20-9 全屏 ----------
+   开播前导播必做的动作。浏览器要求 requestFullscreen 必须由真实点击触发，
+   无法用代码自动进入，因此这个按钮不可省。 */
+function isFullscreen(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+$('fsBtn').addEventListener('click',function(){
+  if(isFullscreen()){
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  }else{
+    var el=document.documentElement;
+    (el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);
+  }
+});
+/* 全屏前后可视高度差很多，不重算就会出现行高沿用旧值、末行被截的情况。 */
+function onFsChange(){$('fsBtn').textContent=isFullscreen()?'退出全屏':'全屏';layout();}
+document.addEventListener('fullscreenchange',onFsChange);
+document.addEventListener('webkitfullscreenchange',onFsChange);
+
+/* ---------- C20-9 启动探活 ----------
+   Cookie 有效期 12 小时内刷新页面不应再要人手输令牌。
+   OBS 崩溃重载、误按 F5、切场景重新加载都会走到这里，
+   若不探活，大屏会卡在令牌闸门等人，而现场往往没人有空去输。 */
+fetch('/api/display/ping',{method:'GET',credentials:'same-origin',headers:{'Accept':'application/json'}})
+  .then(function(res){return res.status===200?res.json():null;})
+  .then(function(body){
+    if(body&&body.code===0){enterStage();return;}
+    $('tokenInput').focus();
+  })
+  .catch(function(){$('tokenInput').focus();});
+
 window.addEventListener('resize',layout);
-$('tokenInput').focus();
 </script>
 </body>
 </html>

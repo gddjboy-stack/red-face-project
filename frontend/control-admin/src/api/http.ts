@@ -36,6 +36,30 @@ export class UnauthorizedError extends Error {
   }
 }
 
+/**
+ * C20-9 业务错误：在原有 Error 之上**附加** code 与 data 两个属性。
+ *
+ * 改造原因：原实现 `throw new Error(payload.message)` 把 `payload.code` 与
+ * `payload.data` 整个丢弃。而直播数据录入的 40910（本次总数小于上次）必须把
+ * data 里的 EntryPreview（lastTotal / currentTotal）展示给运营——那是他判断
+ * 「是不是新场次开播了」的唯一依据，只给一句「提交失败」等于让他猜。
+ *
+ * 兼容性：本类继承 Error，`message` 与 `instanceof Error` 行为完全不变，
+ * 既有调用方若只读 `err.message` 不受任何影响，新增属性对它们不可见。
+ */
+export class ApiError extends Error {
+  readonly code: number
+  readonly data: unknown
+  readonly status: number
+  constructor(message: string, code: number, data: unknown, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+    this.data = data
+    this.status = status
+  }
+}
+
 export async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     ...((options.headers as Record<string, string>) || {})
@@ -75,7 +99,13 @@ export async function request<T>(url: string, options: RequestInit = {}): Promis
 
   const payload = (await response.json()) as ApiResponse<T>
   if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.message || `请求失败：${response.status}`)
+    // C20-9：改抛 ApiError 以保留 code 与 data；message 取值与原来逐字一致。
+    throw new ApiError(
+      payload.message || `请求失败：${response.status}`,
+      payload.code,
+      payload.data,
+      response.status
+    )
   }
   return payload.data
 }

@@ -24,6 +24,7 @@ public class LiveMetricEntryService {
     private static final String SOURCE_COMMENT = "comment";
     private static final String SOURCE_GIFT = "gift";
     private static final String TARGET_PLAYER = "player";
+    private static final String TARGET_SPY = "spy";
 
     private final LiveWatermarkService watermarkService;
     private final PopularityService popularityService;
@@ -124,8 +125,12 @@ public class LiveMetricEntryService {
                 + ",\"previousTotal\":" + preview.lastTotal() + "}");
         if (LiveWatermarkService.METRIC_GIFT.equals(preview.metricType())) {
             // 礼物走水位线时，中控台累计数是全场维度、不区分选手，只能按当前场控目标归属。
-            req.setTargetType(TARGET_PLAYER);
-            req.setTargetId(requireCollectPlayerId());
+            // C20-9：归属类型必须跟随场控模式，不能写死 player。
+            // 写死会使卧底直播（spy 模式）的礼物错记入个人人气，
+            // 而卧底人气与个人人气是两列不同的统计，误记后无法从流水自动区分。
+            CollectState collect = requireGiftAttributableCollect();
+            req.setTargetType(collect.getMode());
+            req.setTargetId(collect.getTargetId());
             Integer roundId = roundService.getCurrentAccrualRoundId();
             if (roundId == null) {
                 throw new IllegalStateException("当前无可用轮次,无法入账礼物");
@@ -135,12 +140,23 @@ public class LiveMetricEntryService {
         return popularityService.applyChange(req);
     }
 
-    private int requireCollectPlayerId() {
+    /**
+     * C20-9 取得可供礼物归属的场控状态。
+     *
+     * <p><b>为何 player 与 spy 都放行，team 与 pool 仍拒绝</b>：
+     * 前两者都指向唯一确定的选手（targetId 非空），语义完备；
+     * 后两者没有唯一选手可归，若强行入账只能靠猜，拒绝才是正确行为。
+     *
+     * <p>原实现只接受 player，使 8/9 阶段二卧底直播（场控固定为 spy）
+     * 的礼物整场无法录入，而卧底人气的主要来源恰好就是礼物。
+     */
+    private CollectState requireGiftAttributableCollect() {
         CollectState current = collectStateService.getCurrent();
-        if (current != null && TARGET_PLAYER.equals(current.getMode()) && current.getTargetId() != null) {
-            return current.getTargetId();
+        if (current != null && current.getTargetId() != null
+                && (TARGET_PLAYER.equals(current.getMode()) || TARGET_SPY.equals(current.getMode()))) {
+            return current;
         }
-        throw new IllegalStateException("礼物按总数录入需要当前场控为 player 模式并已指定目标选手");
+        throw new IllegalStateException("礼物按总数录入需要当前场控已指定目标选手（选手模式或卧底模式）");
     }
 
     /**
