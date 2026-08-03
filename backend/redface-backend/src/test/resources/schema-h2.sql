@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS coefficient_ledger;
 DROP TABLE IF EXISTS popularity_ledger;
 DROP TABLE IF EXISTS team_distribution_batches;
 DROP TABLE IF EXISTS idempotency_ledger;
+DROP TABLE IF EXISTS spy_coefficient_ledger;
 DROP TABLE IF EXISTS team_coefficient_ledger;
 DROP TABLE IF EXISTS operations_log;
 DROP TABLE IF EXISTS collect_state;
@@ -55,6 +56,10 @@ CREATE TABLE rounds (
   start_time  TIMESTAMP NOT NULL,
   end_time    TIMESTAMP NOT NULL,
   status      VARCHAR(20) NOT NULL DEFAULT 'upcoming',
+  -- C20-10：本轮参与投票的独立观众人数（去重人头数，非投票次数）。
+  -- 可空是刻意的：NULL=尚未录入，0=确实无人投票，两者是不同状态，不得用 0 代替未录入，
+  -- 否则识破判定的分母会变成 0 而无人察觉。
+  voter_count INT NULL,
   PRIMARY KEY (round_id)
 );
 
@@ -98,6 +103,9 @@ CREATE TABLE player_round_stats (
   individual_popularity BIGINT NOT NULL DEFAULT 0,
   spy_popularity        BIGINT NOT NULL DEFAULT 0,
   coefficient           INT NOT NULL DEFAULT 100,
+  -- C20-10：卧底人气系数×100（100=1.0）。与 coefficient 分列而非复用，
+  -- 因为个人人气系数与卧底人气系数来源不同、施加时机不同，合并会导致误伤个人人气。
+  spy_coefficient       INT NOT NULL DEFAULT 100,
   updated_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (player_id, round_id)
 );
@@ -317,6 +325,27 @@ CREATE TABLE team_coefficient_ledger (
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_team_coef_idem (idempotency_key)
+);
+
+-- C20-10: 卧底人气系数账本。
+-- 刻意不镜像 team_coefficient_ledger 的 delta（增量/加法）语义：
+-- 卧底系数按 Vincent 规则是「任务加成 × 识破减半」相乘，若沿用 delta 累加，
+-- ×1.3 与 ×0.5 会变成 100+30-50=80 而非 130×50/100=65，差 30750 人气且两者都不报错。
+-- factor 存 100 基数的乘数因子（130=×1.3，50=×0.5），factor_type 区分来源以便分项回显。
+CREATE TABLE spy_coefficient_ledger (
+  id              BIGINT NOT NULL AUTO_INCREMENT,
+  player_id       INT NOT NULL,
+  round_id        INT NOT NULL,
+  factor          INT NOT NULL,
+  factor_type     VARCHAR(30) NOT NULL,
+  idempotency_key VARCHAR(128) NOT NULL,
+  operator_id     VARCHAR(64) NOT NULL,
+  reason          VARCHAR(500) NULL,
+  revoked         TINYINT NOT NULL DEFAULT 0,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_spy_coef_idem (idempotency_key),
+  KEY idx_spy_coef_round_player (round_id, player_id)
 );
 
 -- C20-3-FIX: 群投票独立账本

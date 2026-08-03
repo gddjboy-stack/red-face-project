@@ -70,11 +70,22 @@ public interface C9QueryMapper {
             """)
     List<PopularityBoardItem> findTeamBoard(@Param("roundId") int roundId);
 
+    /**
+     * 卧底榜。C20-10 起在读取时乘上 {@code spy_coefficient} 折算，
+     * 与 {@link #findTeamBoard} 的团队系数折算保持同一范式（账本存裸值，读取时折算）。
+     *
+     * <p>必须保留 {@code AS popularityValue} 别名：{@code PopularityBoardItem} 靠
+     * {@code setPopularityValue(long)} 这个额外 setter 接住它，而前端表格读的是
+     * {@code prop="value"}。改则前端那一列会静默变空，不报错。
+     *
+     * <p>{@code COALESCE(prs.spy_coefficient, 100)} 的兼容作用：LEFT JOIN 未命中时
+     * 整行为 NULL，此时应视为系数 1.0 而非 0，否则未建 stats 行的选手卧底人气会被归零。
+     */
     @Select("""
             SELECT p.number AS number,
                    p.name AS name,
                    t.name AS teamName, pr.is_spy AS isSpy,
-                   COALESCE(prs.spy_popularity, 0) AS popularityValue
+                   CAST(COALESCE(prs.spy_popularity, 0) * COALESCE(prs.spy_coefficient, 100) / 100 AS SIGNED) AS popularityValue
             FROM player_round pr
             JOIN players p ON p.player_id = pr.player_id
             LEFT JOIN teams t ON t.team_id = pr.team_id

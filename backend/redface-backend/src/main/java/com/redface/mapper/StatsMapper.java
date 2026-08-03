@@ -20,8 +20,8 @@ public interface StatsMapper {
      * @return 受影响行数
      */
     @Insert("""
-            INSERT INTO player_round_stats (player_id, round_id, individual_popularity, spy_popularity, coefficient)
-            VALUES (#{playerId}, #{roundId}, 0, 0, 100)
+            INSERT INTO player_round_stats (player_id, round_id, individual_popularity, spy_popularity, coefficient, spy_coefficient)
+            VALUES (#{playerId}, #{roundId}, 0, 0, 100, 100)
             ON DUPLICATE KEY UPDATE player_id = player_id
             """)
     int ensurePlayerRoundStats(@Param("playerId") int playerId, @Param("roundId") int roundId);
@@ -87,11 +87,29 @@ public interface StatsMapper {
     Long findPlayerIndividualPopularity(@Param("playerId") int playerId, @Param("roundId") int roundId);
 
     /**
-     * 查询指定选手轮次的卧底人气值。
+     * 查询指定选手轮次的卧底人气值（C20-10 起为折算后值）。
+     *
+     * <p>此方法被场控监控的「目标人气」消费（LiveHomeService）。它与卧底榜
+     * 必须同步折算：若只改卧底榜而此处仍返裸值，同一选手在卧底榜与场控监控
+     * 会显示两个不同数字（如 133250 与 205000），运营会认为系统出错。
+     *
+     * <p>如需未折算的裸值（例如界面要分行展示「基础值 × 系数 = 折算后」），
+     * 请用 {@link #findPlayerSpyPopularityRaw}，不要把本方法改回裸值。
      *
      * @param playerId 选手 ID
      * @param roundId  轮次 ID
-     * @return 当前卧底人气值
+     * @return 折算后的卧底人气值
+     */
+    @Select("""
+            SELECT CAST(COALESCE(spy_popularity, 0) * COALESCE(spy_coefficient, 100) / 100 AS SIGNED)
+            FROM player_round_stats
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    Long findPlayerSpyPopularity(@Param("playerId") int playerId, @Param("roundId") int roundId);
+
+    /**
+     * 查询未经系数折算的卧底人气裸值，仅用于界面分项回显与核对。
      */
     @Select("""
             SELECT COALESCE(spy_popularity, 0)
@@ -99,7 +117,51 @@ public interface StatsMapper {
             WHERE player_id = #{playerId}
               AND round_id = #{roundId}
             """)
-    Long findPlayerSpyPopularity(@Param("playerId") int playerId, @Param("roundId") int roundId);
+    Long findPlayerSpyPopularityRaw(@Param("playerId") int playerId, @Param("roundId") int roundId);
+
+    /**
+     * 查询选手当前卧底系数（×100 整数，100 为 1.0）。行不存在时返回 null。
+     */
+    @Select("""
+            SELECT COALESCE(spy_coefficient, 100)
+            FROM player_round_stats
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    Integer findPlayerSpyCoefficient(@Param("playerId") int playerId, @Param("roundId") int roundId);
+
+    /**
+     * 以乘法施加卧底系数因子。注意这里是乘法，不是团队版的加法累加。
+     *
+     * <p>举例：现有 130（×1.3），施加 factor=50（×0.5）→ 130×50/100 = 65（×0.65）。
+     * 若错用加法累加会得到 130+50-100=80（×0.8），两者都不报错，这是 C20-10
+     * 刻意不镜像 {@link #updateTeamCoefficient} 的原因。
+     *
+     * @param factor 乘数因子×100（130=×1.3，50=×0.5）
+     */
+    @Update("""
+            UPDATE player_round_stats
+            SET spy_coefficient = CAST(COALESCE(spy_coefficient, 100) * #{factor} / 100 AS SIGNED)
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    int multiplyPlayerSpyCoefficient(@Param("playerId") int playerId,
+                                     @Param("roundId") int roundId,
+                                     @Param("factor") int factor);
+
+    /**
+     * 将卧底系数直接重算为指定值。仅用于撤销后按剩余未撤销账本条目重建，
+     * 不得用于日常施加（日常施加请用 {@link #multiplyPlayerSpyCoefficient}）。
+     */
+    @Update("""
+            UPDATE player_round_stats
+            SET spy_coefficient = #{coefficient}
+            WHERE player_id = #{playerId}
+              AND round_id = #{roundId}
+            """)
+    int resetPlayerSpyCoefficient(@Param("playerId") int playerId,
+                                  @Param("roundId") int roundId,
+                                  @Param("coefficient") int coefficient);
 
     /**
      * 确保团队轮次统计行存在。若已存在，则保持原值不变。

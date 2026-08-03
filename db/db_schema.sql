@@ -25,6 +25,9 @@ CREATE TABLE rounds (
   start_time  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '轮次开始时间，创建时显式赋值',
   end_time    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '轮次结束时间，创建时显式赋值',
   status      VARCHAR(20) NOT NULL DEFAULT 'upcoming' COMMENT 'upcoming/active/completed',
+  -- C20-10：可空是刻意的。NULL=尚未录入，0=确实无人投票，两者是不同状态；
+  -- 若用 0 代替未录入，识破判定的分母就会静默变成 0，导致任何得票都超过 50%。
+  voter_count INT NULL COMMENT '本轮参与投票的独立观众人数(去重人头数,非投票次数)',
   PRIMARY KEY (round_id)
 ) ENGINE=InnoDB COMMENT='赛事轮次表';
 
@@ -68,6 +71,9 @@ CREATE TABLE player_round_stats (
   individual_popularity BIGINT NOT NULL DEFAULT 0 COMMENT '本轮个人人气值(原始,未衰减)',
   spy_popularity        BIGINT NOT NULL DEFAULT 0 COMMENT '本轮卧底人气值',
   coefficient           INT NOT NULL DEFAULT 100 COMMENT '加成系数×100, 1.0=100',
+  -- C20-10：与 coefficient 分列而非复用。两者来源与施加时机不同，
+  -- 合并会使「卧底被识破减半」连带减半该选手的个人人气，而那是他去留的依据。
+  spy_coefficient       INT NOT NULL DEFAULT 100 COMMENT '卧底人气系数×100, 1.0=100',
   updated_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (player_id, round_id)
 ) ENGINE=InnoDB COMMENT='选手每轮人气与系数';
@@ -293,6 +299,30 @@ CREATE TABLE team_coefficient_ledger (
   CONSTRAINT fk_team_coef_ledger_team FOREIGN KEY (team_id) REFERENCES teams (team_id) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_team_coef_ledger_round FOREIGN KEY (round_id) REFERENCES rounds (round_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB COMMENT='团队加成系数变动流水';
+
+-- C20-10: 卧底人气系数账本。
+-- 刻意不镜像 team_coefficient_ledger 的 delta（增量/加法）语义：
+-- 卧底系数按规则是「任务加成 × 识破减半」相乘。若沿用 delta 累加，
+-- ×1.3 与 ×0.5 会得到 100+30-50=80，而正确结果是 130×50/100=65；
+-- 以基础卧底人气 205000 计，两者差 30750 人气，且都不报错，运营无从判断哪个对。
+-- factor 存 100 基数的乘数因子（130 表示 ×1.3，50 表示 ×0.5）；
+-- factor_type 区分来源（task_bonus/exposed_halve/manual），以满足界面分项回显。
+-- revoked 而非物理删除：系数直接影响选手去留，撤销动作本身必须可追溯。
+CREATE TABLE spy_coefficient_ledger (
+  id              BIGINT NOT NULL AUTO_INCREMENT,
+  player_id       INT NOT NULL,
+  round_id        INT NOT NULL,
+  factor          INT NOT NULL COMMENT '乘数因子×100，130=×1.3，50=×0.5，不是增量',
+  factor_type     VARCHAR(30) NOT NULL COMMENT 'task_bonus/exposed_halve/manual',
+  idempotency_key VARCHAR(128) NOT NULL,
+  operator_id     VARCHAR(64) NOT NULL,
+  reason          VARCHAR(500) NULL,
+  revoked         TINYINT(1) NOT NULL DEFAULT 0 COMMENT '撤销标记，不物理删除以保留追溯',
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_spy_coef_idem (idempotency_key),
+  KEY idx_spy_coef_round_player (round_id, player_id)
+) ENGINE=InnoDB COMMENT='卧底人气系数账本-乘数语义非增量语义';
 
 -- C20-3-FIX: 群投票独立账本（票数只判卧底胜负，不折算人气，与popularity_ledger物理隔离）
 CREATE TABLE group_vote_ledger (
