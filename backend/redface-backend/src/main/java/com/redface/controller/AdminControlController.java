@@ -12,6 +12,8 @@ import com.redface.dto.OrderImportPreview;
 import com.redface.dto.PopularityBoardResponse;
 import com.redface.dto.PopularityChangeResult;
 import com.redface.dto.SimResult;
+import com.redface.dto.SpyCoefficientResult;
+import com.redface.dto.VoterCountResult;
 import com.redface.entity.CollectState;
 import com.redface.entity.LiveMetricWatermark;
 import com.redface.entity.ProductPriceConfig;
@@ -21,6 +23,8 @@ import com.redface.service.LiveWatermarkService;
 import com.redface.service.ManualSalesService;
 import com.redface.service.OrderImportService;
 import com.redface.service.ProductPriceService;
+import com.redface.service.SpyCoefficientService;
+import com.redface.service.VoterCountService;
 import com.redface.util.SheetReader;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +49,8 @@ public class AdminControlController {
     private final OrderImportService orderImportService;
     private final ProductPriceService productPriceService;
     private final ManualSalesService manualSalesService;
+    private final SpyCoefficientService spyCoefficientService;
+    private final VoterCountService voterCountService;
 
     public AdminControlController(AdminControlService adminControlService,
                                   CoefficientService coefficientService,
@@ -52,7 +58,9 @@ public class AdminControlController {
                                   LiveWatermarkService liveWatermarkService,
                                   OrderImportService orderImportService,
                                   ProductPriceService productPriceService,
-                                  ManualSalesService manualSalesService) {
+                                  ManualSalesService manualSalesService,
+                                  SpyCoefficientService spyCoefficientService,
+                                  VoterCountService voterCountService) {
         this.adminControlService = adminControlService;
         this.coefficientService = coefficientService;
         this.liveMetricEntryService = liveMetricEntryService;
@@ -60,6 +68,8 @@ public class AdminControlController {
         this.orderImportService = orderImportService;
         this.productPriceService = productPriceService;
         this.manualSalesService = manualSalesService;
+        this.spyCoefficientService = spyCoefficientService;
+        this.voterCountService = voterCountService;
     }
 
     @GetMapping("/live/home")
@@ -295,6 +305,98 @@ public class AdminControlController {
     public ApiResponse<ManualSalesService.ManualSalesSummary> getManualSalesSummary(
             @RequestParam int roundId) {
         return ApiResponse.success(manualSalesService.summarize(roundId));
+    }
+
+    /**
+     * C20-10 录入或更正本轮投票参与人数。
+     *
+     * <p>返回体 {@code status} 两种取值，前端必须分开处理：
+     * {@code recorded}（已写入）、{@code needs_confirm}（<b>尚未写入</b>，
+     * 需运营看清 {@code confirmReason} 后带 confirmed=true 重提）。
+     *
+     * <p>两类情形会触发二次确认：参与人数小于已录最高得票数（数学上不可能），
+     * 以及覆盖已有值（防「以为在首录、实际抹掉了别人录的数」）。
+     */
+    @PostMapping("/voter-count/entry")
+    public ApiResponse<VoterCountResult> recordVoterCount(
+            @RequestBody AdminRequests.VoterCountEntryRequest request) {
+        if (request.getRoundId() == null) {
+            throw new IllegalArgumentException("roundId不能为空");
+        }
+        if (request.getVoterCount() == null) {
+            throw new IllegalArgumentException("voterCount不能为空（0 表示确实无人投票，与未录入含义不同）");
+        }
+        return ApiResponse.success(voterCountService.record(request.getRoundId(), request.getVoterCount(),
+                Boolean.TRUE.equals(request.getConfirmed()), request.getOperatorId(), request.getReason()));
+    }
+
+    /**
+     * C20-10 查询本轮参与人数。
+     *
+     * <p>{@code voterCount} 为 null 时表示<b>本轮尚未录入</b>，前端不得显示为 0：
+     * 显示 0 会让场控认为这是真实数据，从而不会去补录，得票占比永远算不出来。
+     */
+    @GetMapping("/voter-count")
+    public ApiResponse<Map<String, Object>> getVoterCount(@RequestParam int roundId) {
+        Integer voterCount = voterCountService.getVoterCount(roundId);
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("roundId", roundId);
+        body.put("voterCount", voterCount);
+        body.put("recorded", voterCount != null);
+        return ApiResponse.success(body);
+    }
+
+    /**
+     * C20-10 施加卧底人气系数因子（任务加成 / 识破减半）。
+     *
+     * <p><b>factor 是乘数因子×100，不是增量</b>，与
+     * {@code /adjust-coefficient} 的加法 delta 语义不同。
+     *
+     * <p>返回体 {@code status} 四种取值必须分开处理：{@code applied}（已施加）、
+     * {@code duplicated}（幂等拦截，<b>已生效</b>）、{@code rejected}
+     * （<b>未生效</b>，请读 {@code rejectReason}）。把 duplicated 与 rejected
+     * 混成一谈会导致两种相反的现场误操作。
+     */
+    @PostMapping("/spy-coefficient/apply")
+    public ApiResponse<SpyCoefficientResult> applySpyCoefficient(
+            @RequestBody AdminRequests.SpyCoefficientApplyRequest request) {
+        if (request.getRoundId() == null || request.getPlayerId() == null) {
+            throw new IllegalArgumentException("roundId与playerId不能为空");
+        }
+        if (request.getFactor() == null) {
+            throw new IllegalArgumentException("factor不能为空（乘数因子×100，130表示×1.3）");
+        }
+        return ApiResponse.success(spyCoefficientService.applyFactor(
+                request.getPlayerId(), request.getRoundId(), request.getFactor(), request.getFactorType(),
+                request.getIdempotencyKey(), request.getOperatorId(), request.getReason()));
+    }
+
+    /**
+     * C20-10 撤销一条卧底系数账本条目，并按剩余未撤销条目重建系数。
+     *
+     * <p>不做除法回退：整数除法不可逆（130→42→127），会累积误差。
+     * 撤销后同类型允许重新施加，以便误标识破后能改回来。
+     */
+    @PostMapping("/spy-coefficient/revoke")
+    public ApiResponse<SpyCoefficientResult> revokeSpyCoefficient(
+            @RequestBody AdminRequests.SpyCoefficientRevokeRequest request) {
+        if (request.getLedgerId() == null || request.getRoundId() == null || request.getPlayerId() == null) {
+            throw new IllegalArgumentException("ledgerId、roundId、playerId均不能为空（需校验账本条目归属）");
+        }
+        return ApiResponse.success(spyCoefficientService.revoke(request.getLedgerId(), request.getPlayerId(),
+                request.getRoundId(), request.getOperatorId(), request.getReason()));
+    }
+
+    /**
+     * C20-10 查询选手当前卧底系数、账本明细与折算前后的卧底人气。
+     *
+     * <p>账本明细包含已撤销条目（{@code revoked=true}）：已撤销条目不参与计算，
+     * 但必须可见，否则运营无法解释系数为何变化。
+     */
+    @GetMapping("/spy-coefficient")
+    public ApiResponse<SpyCoefficientResult> inspectSpyCoefficient(@RequestParam int playerId,
+                                                                   @RequestParam int roundId) {
+        return ApiResponse.success(spyCoefficientService.inspect(playerId, roundId));
     }
 
     /**

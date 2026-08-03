@@ -1,0 +1,20 @@
+########## 5. 覆盖已有值 80→95：needs_confirm，此时尚未写入 ##########
+{"code":0,"message":"success","data":{"status":"needs_confirm","roundId":1,"voterCountBefore":80,"voterCountAfter":95,"topVotes":45,"topPlayerName":"林一","confirmReason":"本轮参与人数已由他人或此前录为 80 人，本次将改为 95 人。旧值会被覆盖（覆盖记录写入操作日志，可追溯）","forcedOverConflict":false}}
+
+########## 6. 验证上一步确实未落库（仍为 80） ##########
+{"code":0,"message":"success","data":{"voterCount":80,"recorded":true,"roundId":1}}
+
+########## 7. confirmed=true 再提交：写入生效 ##########
+{"code":0,"message":"success","data":{"status":"recorded","roundId":1,"voterCountBefore":80,"voterCountAfter":95,"topVotes":45,"topPlayerName":"林一","confirmReason":null,"forcedOverConflict":false}}
+
+########## 8. 冲突：填 30 < 最高得票 45 → needs_confirm，理由点名冲突对象 ##########
+{"code":0,"message":"success","data":{"status":"needs_confirm","roundId":1,"voterCountBefore":95,"voterCountAfter":30,"topVotes":45,"topPlayerName":"林一","confirmReason":"本次要录入的参与人数 30 人，小于本轮已录得票最高的选手「1号 林一」的 45 票。两者必有一个录错：若是人数数错，请改人数；若是票数录错，请到群投票录入用负数冲销后重录（票数不提供覆盖）；另外：本轮参与人数已由他人或此前录为 95 人，本次将改为 30 人。旧值会被覆盖（覆盖记录写入操作日志，可追溯）","forcedOverConflict":false}}
+
+########## 9. 强制覆盖冲突值：写入但 forcedOverConflict=true（供审计定位） ##########
+{"code":0,"message":"success","data":{"status":"recorded","roundId":1,"voterCountBefore":95,"voterCountAfter":30,"topVotes":45,"topPlayerName":"林一","confirmReason":null,"forcedOverConflict":true}}
+
+########## 10. 冲突态下占比 150%，界面须标红而非静默截断 ##########
+{"code":0,"message":"success","data":{"roundId":1,"totalVotes":87,"voterCount":30,"items":[{"playerId":1,"playerName":"林一","playerNumber":1,"totalVotes":45,"entryCount":1,"votePercent":150.0,"exposed":false},{"playerId":2,"playerName":"周二","playerNumber":2,"totalVotes":30,"entryCount":1,"votePercent":100.0,"exposed":false},{"playerId":3,"playerName":"张三","playerNumber":3,"totalVotes":12,"entryCount":1,"votePercent":40.0,"exposed":false}],"voterCountRecorded":true}}
+
+########## 11. 修回 95 ##########
+{"code":0,"message":"success","data":{"status":"recorded","roundId":1,"voterCountBefore":30,"voterCountAfter":95,"topVotes":45,"topPlayerName":"林一","confirmReason":null,"forcedOverConflict":false}}

@@ -14,6 +14,7 @@ import com.redface.entity.CollectState;
 import com.redface.mapper.GroupVoteLedgerMapper;
 import com.redface.mapper.OperationsLogMapper;
 import com.redface.mapper.PopularityLedgerMapper;
+import com.redface.mapper.SpyCoefficientLedgerMapper;
 import com.redface.query.LiveHomeService;
 import com.redface.query.PopularityBoardService;
 import java.time.LocalDateTime;
@@ -40,6 +41,8 @@ public class AdminControlService {
     private final PopularityLedgerMapper popularityLedgerMapper;
     private final GroupVoteLedgerMapper groupVoteLedgerMapper;
     private final LiveWatermarkService liveWatermarkService;
+    private final VoterCountService voterCountService;
+    private final SpyCoefficientLedgerMapper spyCoefficientLedgerMapper;
 
     public AdminControlService(CollectStateService collectStateService,
                                LiveDataService liveDataService,
@@ -50,7 +53,9 @@ public class AdminControlService {
                                OperationsLogMapper operationsLogMapper,
                                PopularityLedgerMapper popularityLedgerMapper,
                                GroupVoteLedgerMapper groupVoteLedgerMapper,
-                               LiveWatermarkService liveWatermarkService) {
+                               LiveWatermarkService liveWatermarkService,
+                               VoterCountService voterCountService,
+                               SpyCoefficientLedgerMapper spyCoefficientLedgerMapper) {
         this.collectStateService = collectStateService;
         this.liveDataService = liveDataService;
         this.popularityService = popularityService;
@@ -61,6 +66,8 @@ public class AdminControlService {
         this.popularityLedgerMapper = popularityLedgerMapper;
         this.groupVoteLedgerMapper = groupVoteLedgerMapper;
         this.liveWatermarkService = liveWatermarkService;
+        this.voterCountService = voterCountService;
+        this.spyCoefficientLedgerMapper = spyCoefficientLedgerMapper;
     }
 
     public LiveHomeResponse getLiveHome() {
@@ -181,8 +188,20 @@ public class AdminControlService {
         }
 
         long currentTotal = groupVoteLedgerMapper.sumVotes(request.getRoundId(), request.getPlayerId());
-        GroupVoteEntryOutcome outcome = new GroupVoteEntryOutcome(duplicated, request.getVotes(), currentTotal);
+
+        // C20-10 票数一侧的参与人数校验。此处<b>只提示不阻断</b>：
+        // 票数的正确修复动作是负数冲销而非覆盖，若在这里硬阻断，
+        // 一旦参与人数录错（例如少数了一位），本轮所有票都录不进去，现场会直接卡死。
+        // 反之若完全不查，得票数超过参与人数的数据会静默流到大屏，出现 120% 的占比。
+        String voterCountWarning = voterCountService.checkAgainstVoterCount(
+                request.getRoundId(), lookupPlayerName(request.getRoundId(), request.getPlayerId()), currentTotal);
+
+        GroupVoteEntryOutcome outcome = new GroupVoteEntryOutcome(
+                duplicated, request.getVotes(), currentTotal, voterCountWarning);
         String message = duplicated ? "重复提交已拦截（幂等），未重复记账" : "群投票录入成功";
+        if (voterCountWarning != null) {
+            message = message + "；但数据存在冲突需核对";
+        }
         return AdminOperationResult.of("group_vote_entry", message, outcome);
     }
 
@@ -198,13 +217,62 @@ public class AdminControlService {
         }
         java.util.List<GroupVoteSummaryItem> items = groupVoteLedgerMapper.summarize(roundId);
         long total = items.stream().mapToLong(GroupVoteSummaryItem::getTotalVotes).sum();
-        return new GroupVoteSummaryResponse(roundId, total, items);
+        Integer voterCount = voterCountService.getVoterCount(roundId);
+        fillPercentAndExposed(items, roundId, voterCount);
+        GroupVoteSummaryResponse response = new GroupVoteSummaryResponse(roundId, total, items);
+        response.setVoterCount(voterCount);
+        return response;
+    }
+
+    /**
+     * C20-10 为汇总项补充得票占比与识破标记。
+     *
+     * <p>占比分母用<b>参与人数</b>而非票数总和：一人可能投多票或弃票，
+     * 用票数总和作分母会得到「所有人占比加起来正好 100%」的假象，掩盖弃票情况。
+     *
+     * <p>参与人数未录入时占比留 null 而非 0，让界面能显示「——」并提示补录。
+     */
+    private void fillPercentAndExposed(java.util.List<GroupVoteSummaryItem> items, int roundId, Integer voterCount) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (GroupVoteSummaryItem item : items) {
+            if (voterCount != null && voterCount > 0) {
+                // 保留一位小数，四舍五入。不取整：4 票/7 人若显示 57% 与 3 票的 43% 相加不为 100，
+                // 运营会怀疑数据出错；一位小数足以让差值来源可解释。
+                item.setVotePercent(Math.round(item.getTotalVotes() * 1000.0 / voterCount) / 10.0);
+            } else if (voterCount != null) {
+                // 参与人数为 0：占比无定义，但已录入，故记 0.0 而非 null，与「未录入」区分。
+                item.setVotePercent(0.0);
+            }
+            if (item.getPlayerId() != null) {
+                item.setExposed(spyCoefficientLedgerMapper.countActiveByType(
+                        item.getPlayerId(), roundId, "exposed_halve") > 0);
+            }
+        }
+    }
+
+    private String lookupPlayerName(int roundId, int playerId) {
+        java.util.List<GroupVoteSummaryItem> items = groupVoteLedgerMapper.summarize(roundId);
+        for (GroupVoteSummaryItem item : items) {
+            if (item.getPlayerId() != null && item.getPlayerId() == playerId) {
+                return item.getPlayerNumber() == null
+                        ? item.getPlayerName()
+                        : item.getPlayerNumber() + "号 " + item.getPlayerName();
+            }
+        }
+        return null;
     }
 
     /**
      * C20-3 群投票录入结果：是否幂等拦截、本次增量、该选手当前累计票数。
+     *
+     * <p>C20-10 新增 {@code voterCountWarning}：非 null 表示票数已入账但与参与人数矛盾，
+     * 前端必须显著提示。<b>不可因为有警告就把本次录入当成失败</b>——票已经在账上了，
+     * 若提示成「录入失败」，运营会再录一次，造成双倍票数。
      */
-    public record GroupVoteEntryOutcome(boolean duplicated, long votesApplied, long currentTotalVotes) {
+    public record GroupVoteEntryOutcome(boolean duplicated, long votesApplied, long currentTotalVotes,
+                                        String voterCountWarning) {
     }
 
     private String generateManualIdempotencyKey(String operatorId) {

@@ -18,7 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 class SchemaInitializationTest {
 
-    private static final int EXPECTED_TABLE_COUNT = 26;
+    private static final int EXPECTED_TABLE_COUNT = 27;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -63,7 +63,10 @@ class SchemaInitializationTest {
                         "live_metric_watermark",
                         "product_price_config",
                         "order_sales_ledger",
-                        "manual_sales_ledger"
+                        "manual_sales_ledger",
+                        // C20-10 卧底人气系数账本。白名单式断言意味着新建表必须在此登记，
+                        // 这是有意的防护：防止有人静默建表而无人审阅其必要性。
+                        "spy_coefficient_ledger"
                 );
         assertThat(tableNames).hasSize(EXPECTED_TABLE_COUNT);
         assertThat(tableNames)

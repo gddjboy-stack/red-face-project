@@ -263,4 +263,84 @@ public final class AdminRequests {
         public Boolean getConfirmed() { return confirmed; }
         public void setConfirmed(Boolean confirmed) { this.confirmed = confirmed; }
     }
+
+    /**
+     * C20-10 投票参与人数录入请求。
+     *
+     * <p>{@code voterCount} 允许为 0（0 表示确实无人投票），不允许为负数。
+     * {@code confirmed=true} 表示运营已在二次确认弹窗中看过冲突详情并坚持写入。
+     */
+    public static class VoterCountEntryRequest {
+        private Integer roundId;
+        private Integer voterCount;
+        private String operatorId;
+        private String reason;
+        private Boolean confirmed;
+        public Integer getRoundId() { return roundId; }
+        public void setRoundId(Integer roundId) { this.roundId = roundId; }
+        public Integer getVoterCount() { return voterCount; }
+        public void setVoterCount(Integer voterCount) { this.voterCount = voterCount; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+        public Boolean getConfirmed() { return confirmed; }
+        public void setConfirmed(Boolean confirmed) { this.confirmed = confirmed; }
+    }
+
+    /**
+     * C20-10 卧底人气系数施加请求。
+     *
+     * <p><b>{@code factor} 是乘数因子×100（130=×1.3，50=×0.5），不是增量。</b>
+     * 与 {@link ManualBonusRequest#getDelta()} 的加法语义不同，不可套用：
+     * 传 130 表示「乘 1.3」，而非「加 1.3」。
+     *
+     * <p>{@code factorType} 只接受 task_bonus 与 exposed_halve。后者 factor 固定 50，
+     * 且同轮同选手只能施加一次。
+     */
+    public static class SpyCoefficientApplyRequest {
+        private Integer roundId;
+        private Integer playerId;
+        private Integer factor;
+        private String factorType;
+        private String operatorId;
+        private String reason;
+        private String idempotencyKey;
+        public Integer getRoundId() { return roundId; }
+        public void setRoundId(Integer roundId) { this.roundId = roundId; }
+        public Integer getPlayerId() { return playerId; }
+        public void setPlayerId(Integer playerId) { this.playerId = playerId; }
+        public Integer getFactor() { return factor; }
+        public void setFactor(Integer factor) { this.factor = factor; }
+        public String getFactorType() { return factorType; }
+        public void setFactorType(String factorType) { this.factorType = factorType; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+        public String getIdempotencyKey() { return idempotencyKey; }
+        public void setIdempotencyKey(String idempotencyKey) { this.idempotencyKey = idempotencyKey; }
+    }
+
+    /**
+     * C20-10 卧底人气系数撤销请求。必须同时传 playerId 与 roundId，
+     * 服务层会校验账本条目归属，防跳轮/跳选手误撤。
+     */
+    public static class SpyCoefficientRevokeRequest {
+        private Long ledgerId;
+        private Integer roundId;
+        private Integer playerId;
+        private String operatorId;
+        private String reason;
+        public Long getLedgerId() { return ledgerId; }
+        public void setLedgerId(Long ledgerId) { this.ledgerId = ledgerId; }
+        public Integer getRoundId() { return roundId; }
+        public void setRoundId(Integer roundId) { this.roundId = roundId; }
+        public Integer getPlayerId() { return playerId; }
+        public void setPlayerId(Integer playerId) { this.playerId = playerId; }
+        public String getOperatorId() { return operatorId; }
+        public void setOperatorId(String operatorId) { this.operatorId = operatorId; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+    }
 }

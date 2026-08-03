@@ -1,0 +1,11 @@
+########## 1. 参与人数未录入：votePercent=null（不是 0） ##########
+{"code":0,"message":"success","data":{"roundId":1,"totalVotes":87,"voterCount":null,"items":[{"playerId":1,"playerName":"林一","playerNumber":1,"totalVotes":45,"entryCount":1,"votePercent":null,"exposed":false},{"playerId":2,"playerName":"周二","playerNumber":2,"totalVotes":30,"entryCount":1,"votePercent":null,"exposed":false},{"playerId":3,"playerName":"张三","playerNumber":3,"totalVotes":12,"entryCount":1,"votePercent":null,"exposed":false}],"voterCountRecorded":false}}
+
+########## 2. 查询参与人数：voterCount=null, recorded=false ##########
+{"code":0,"message":"success","data":{"voterCount":null,"recorded":false,"roundId":1}}
+
+########## 3. 首次录入 80 人：直接生效，无需二次确认 ##########
+{"code":0,"message":"success","data":{"status":"recorded","roundId":1,"voterCountBefore":null,"voterCountAfter":80,"topVotes":45,"topPlayerName":"林一","confirmReason":null,"forcedOverConflict":false}}
+
+########## 4. 占比以参与人数为分母：45/80=56.3%，三人合计>100%（可多投） ##########
+{"code":0,"message":"success","data":{"roundId":1,"totalVotes":87,"voterCount":80,"items":[{"playerId":1,"playerName":"林一","playerNumber":1,"totalVotes":45,"entryCount":1,"votePercent":56.3,"exposed":false},{"playerId":2,"playerName":"周二","playerNumber":2,"totalVotes":30,"entryCount":1,"votePercent":37.5,"exposed":false},{"playerId":3,"playerName":"张三","playerNumber":3,"totalVotes":12,"entryCount":1,"votePercent":15.0,"exposed":false}],"voterCountRecorded":true}}

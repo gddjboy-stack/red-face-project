@@ -2,12 +2,14 @@ package com.redface.query;
 
 import com.redface.dto.DisplayBoardItem;
 import com.redface.dto.DisplayBoardResponse;
-import com.redface.dto.GroupVoteSummaryResponse;
+import com.redface.dto.DisplayGroupVoteItem;
+import com.redface.dto.DisplayGroupVoteResponse;
 import com.redface.dto.PopularityBoardItem;
 import com.redface.dto.PopularityBoardResponse;
 import com.redface.mapper.C9QueryMapper;
 import com.redface.mapper.GroupVoteLedgerMapper;
 import com.redface.dto.GroupVoteSummaryItem;
+import com.redface.mapper.RoundMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,13 +36,16 @@ public class DisplayBoardService {
     private final PopularityBoardService popularityBoardService;
     private final C9QueryMapper c9QueryMapper;
     private final GroupVoteLedgerMapper groupVoteLedgerMapper;
+    private final RoundMapper roundMapper;
 
     public DisplayBoardService(PopularityBoardService popularityBoardService,
                                C9QueryMapper c9QueryMapper,
-                               GroupVoteLedgerMapper groupVoteLedgerMapper) {
+                               GroupVoteLedgerMapper groupVoteLedgerMapper,
+                               RoundMapper roundMapper) {
         this.popularityBoardService = popularityBoardService;
         this.c9QueryMapper = c9QueryMapper;
         this.groupVoteLedgerMapper = groupVoteLedgerMapper;
+        this.roundMapper = roundMapper;
     }
 
     /**
@@ -77,21 +82,47 @@ public class DisplayBoardService {
     /**
      * 查询大屏群投票汇总。数据来自独立账本 group_vote_ledger，不与人气账本混算。
      *
-     * @param roundId 轮次；小于等于 0 表示自动取 active 轮次
-     * @return 群投票汇总响应
+     * <p>C20-10 带上参与人数与得票占比，使大屏能打出「得票 42%」这类读数。
+     *
+     * <p><b>返回专用的 {@link DisplayGroupVoteResponse} 而非后台的
+     * {@code GroupVoteSummaryResponse}</b>：后者带 {@code exposed}（识破标记）。
+     * 此处曾经的实现是复用后台 DTO 但「不给 exposed 赋值」，那是错的：
+     * 字段仍在类上，Jackson 照样输出 {@code "exposed": false}，观众开控制台即可看到。
+     * 安全边界必须由<b>类型定义</b>保证，而不是靠「记得不赋值」的约定。
+     * 同理，本类拒接 {@code tab=spy}。
+     *
+     * @param roundId 轮次；小于等于 0 表示自动取当前 active 轮次
+     * @return 大屏群投票汇总响应（无识破标记）
      */
-    public GroupVoteSummaryResponse getGroupVoteSummary(int roundId) {
+    public DisplayGroupVoteResponse getGroupVoteSummary(int roundId) {
         int effectiveRoundId = roundId;
         if (effectiveRoundId <= 0) {
             RoundSummary activeRound = c9QueryMapper.findLatestActiveRound();
             effectiveRoundId = activeRound == null ? 0 : activeRound.getRoundId();
         }
         if (effectiveRoundId <= 0) {
-            return new GroupVoteSummaryResponse(0, 0L, List.of());
+            return new DisplayGroupVoteResponse(0, 0L, null, List.of());
         }
-        List<GroupVoteSummaryItem> items = groupVoteLedgerMapper.summarize(effectiveRoundId);
-        long total = items.stream().mapToLong(GroupVoteSummaryItem::getTotalVotes).sum();
-        return new GroupVoteSummaryResponse(effectiveRoundId, total, items);
+        List<GroupVoteSummaryItem> source = groupVoteLedgerMapper.summarize(effectiveRoundId);
+        if (source == null) {
+            source = List.of();
+        }
+        long total = source.stream().mapToLong(GroupVoteSummaryItem::getTotalVotes).sum();
+        Integer voterCount = roundMapper.findVoterCount(effectiveRoundId);
+        List<DisplayGroupVoteItem> items = new ArrayList<>(source.size());
+        for (GroupVoteSummaryItem item : source) {
+            // 占比在此处重算而非读源对象：源对象的 votePercent 由后台路径填充，
+            // 两边各算一次看似冗余，但它保证大屏不依赖后台 DTO 的任何中间状态。
+            Double percent = null;
+            if (voterCount != null) {
+                percent = voterCount > 0
+                        ? Math.round(item.getTotalVotes() * 1000.0 / voterCount) / 10.0
+                        : 0.0;
+            }
+            items.add(new DisplayGroupVoteItem(item.getPlayerId(), item.getPlayerName(),
+                    item.getPlayerNumber(), item.getTotalVotes(), item.getEntryCount(), percent));
+        }
+        return new DisplayGroupVoteResponse(effectiveRoundId, total, voterCount, items);
     }
 
     private List<DisplayBoardItem> toRankedItems(List<PopularityBoardItem> source) {

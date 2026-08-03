@@ -1,0 +1,50 @@
+########## 21. 大屏换取展示 Cookie ##########
+{"code":0,"message":"success","data":{"expiresInSeconds":43200}}
+
+########## 22. 大屏群投票汇总：带 voterCount 与 votePercent ##########
+###      【关键】响应中物理上不含 exposed 字段。
+###      修正前的实现是复用后台 DTO 但不赋值，Jackson 仍会输出 "exposed": false，
+###      观众开控制台即可确认系统在跟踪识破状态，属赛制机密泄露。
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "roundId": 1,
+        "totalVotes": 87,
+        "voterCount": 95,
+        "items": [
+            {
+                "playerId": 1,
+                "playerName": "\u6797\u4e00",
+                "playerNumber": 1,
+                "totalVotes": 45,
+                "entryCount": 1,
+                "votePercent": 47.4
+            },
+            {
+                "playerId": 2,
+                "playerName": "\u5468\u4e8c",
+                "playerNumber": 2,
+                "totalVotes": 30,
+                "entryCount": 1,
+                "votePercent": 31.6
+            },
+            {
+                "playerId": 3,
+                "playerName": "\u5f20\u4e09",
+                "playerNumber": 3,
+                "totalVotes": 12,
+                "entryCount": 1,
+                "votePercent": 12.6
+            }
+        ],
+        "voterCountRecorded": true
+    }
+}
+
+--- 字段级校验：大屏响应中 exposed 出现次数（期望 0） ---
+exposed 出现次数 = 0
+PASS：大屏未泄露识破标记
+
+--- 对照：后台同轮次汇总仍含 exposed（后台需要它做标记） ---
+后台响应中 exposed=true 出现次数 = 1（期望 1，即 1 号林一）

@@ -3,7 +3,7 @@ package com.redface.controller;
 import com.redface.api.ApiResponse;
 import com.redface.config.DisplayProperties;
 import com.redface.dto.DisplayBoardResponse;
-import com.redface.dto.GroupVoteSummaryResponse;
+import com.redface.dto.DisplayGroupVoteResponse;
 import com.redface.query.DisplayBoardService;
 import com.redface.web.DisplayAuthInterceptor;
 import com.redface.web.DisplayLoginGuard;
@@ -139,9 +139,13 @@ public class DisplayController {
 
     /**
      * 大屏群投票汇总（只读）。数据取自独立账本 group_vote_ledger。
+     *
+     * <p>C20-10：返回类型为 {@link DisplayGroupVoteResponse}，它物理上不含
+     * {@code exposed}（识破标记）。不得图方便改回后台的
+     * {@code GroupVoteSummaryResponse}：那会把赛制机密带到观众可见的响应体里。
      */
     @GetMapping("/api/display/group-vote")
-    public ApiResponse<GroupVoteSummaryResponse> getGroupVote(
+    public ApiResponse<DisplayGroupVoteResponse> getGroupVote(
             @RequestParam(defaultValue = "0") int roundId) {
         return ApiResponse.success(displayBoardService.getGroupVoteSummary(roundId));
     }

@@ -78,3 +78,47 @@ export function calibrateWatermarks(data: any) {
 export function revokeCalibration(data: any) {
   return jsonPost<any>('/api/admin/live/watermarks/revoke-calibration', data)
 }
+
+/* ==================== C20-10 投票参与人数与卧底人气系数 ==================== */
+
+/**
+ * 录入本轮投票参与人数（得票占比的分母）。
+ *
+ * 后端可能返回 status='needs_confirm'（覆盖已有值，或人数小于最高得票数），
+ * 此时**尚未写入**，需带 confirmed=true 再提交一次。
+ */
+export function recordVoterCount(data: any) {
+  return jsonPost<any>('/api/admin/voter-count/entry', data)
+}
+
+/**
+ * 查询本轮参与人数。
+ *
+ * 返回的 voterCount 可能为 null，表示**尚未录入**，与 0（确实无人投票）不同。
+ * 界面必须显示「未录入」而非 0，否则场控会以为数据已齐而不去补录。
+ */
+export function getVoterCount(roundId: number) {
+  return request<any>(`/api/admin/voter-count?roundId=${roundId}`)
+}
+
+/**
+ * 施加卧底人气系数因子。
+ *
+ * factor 是**乘数因子×100**（130=×1.3，50=×0.5），不是增量 delta。
+ * 后端返回四种状态：applied（已生效）/ duplicated（幂等拦截，此前已生效）/
+ * rejected（未生效，看 rejectReason）/ revoked。
+ * duplicated 与 rejected 含义相反，界面不可混为一谈。
+ */
+export function applySpyCoefficient(data: any) {
+  return jsonPost<any>('/api/admin/spy-coefficient/apply', data)
+}
+
+/** 撤销一条卧底系数账本条目，后端按剩余未撤销条目重建系数（不做除法回退） */
+export function revokeSpyCoefficient(data: any) {
+  return jsonPost<any>('/api/admin/spy-coefficient/revoke', data)
+}
+
+/** 查询选手当前系数、裸值/折算后卧底人气与完整账本（含已撤销条目） */
+export function getSpyCoefficient(playerId: number, roundId: number) {
+  return request<any>(`/api/admin/spy-coefficient?playerId=${playerId}&roundId=${roundId}`)
+}

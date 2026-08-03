@@ -63,6 +63,29 @@ public interface GroupVoteLedgerMapper {
     long sumVotes(@Param("roundId") int roundId, @Param("playerId") int playerId);
 
     /**
+     * C20-10：取本轮净票数最高的一位选手（含姓名与序号），供参与人数校验时回报冲突详情。
+     *
+     * <p>只回一句「参与人数小于得票数」无法定位问题：现场有十几位选手，场控不知道
+     * 该去核对谁的票。这里带出选手姓名/序号与票数，拒绝提示才可执行。
+     *
+     * <p>本轮无任何投票流水时返回 null（不是返回 0 票的空壳），调用方据此跳过校验。
+     */
+    @Select("""
+            SELECT g.player_id AS playerId,
+                   p.name AS playerName,
+                   p.number AS playerNumber,
+                   COALESCE(SUM(g.votes), 0) AS totalVotes,
+                   COUNT(*) AS entryCount
+            FROM group_vote_ledger g
+            LEFT JOIN players p ON p.player_id = g.player_id
+            WHERE g.round_id = #{roundId}
+            GROUP BY g.player_id, p.name, p.number
+            ORDER BY COALESCE(SUM(g.votes), 0) DESC
+            LIMIT 1
+            """)
+    GroupVoteSummaryItem findTopVoted(@Param("roundId") int roundId);
+
+    /**
      * 按幂等键查询是否已存在流水（用于测试与审计）。
      */
     @Select("SELECT COUNT(*) FROM group_vote_ledger WHERE idempotency_key = #{idempotencyKey}")

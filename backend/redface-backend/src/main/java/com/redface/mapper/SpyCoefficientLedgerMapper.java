@@ -124,6 +124,33 @@ public interface SpyCoefficientLedgerMapper {
                           @Param("roundId") int roundId,
                           @Param("factorType") String factorType);
 
+    /**
+     * 取同类型最近一条未撤销条目。用于「识破减半」重复施加被拒时，
+     * 把已施加的时间与操作人一并回给场控——只回一句「已施加过」，
+     * 现场会以为是系统卡住而反复点击，或误以为自己没点成功去改数据。
+     */
+    @Select("""
+            SELECT l.id AS id,
+                   l.player_id AS playerId,
+                   l.round_id AS roundId,
+                   l.factor AS factor,
+                   l.factor_type AS factorType,
+                   l.operator_id AS operatorId,
+                   l.reason AS reason,
+                   l.revoked AS revoked,
+                   l.created_at AS createdAt
+            FROM spy_coefficient_ledger l
+            WHERE l.round_id = #{roundId}
+              AND l.player_id = #{playerId}
+              AND l.factor_type = #{factorType}
+              AND l.revoked = 0
+            ORDER BY l.id DESC
+            LIMIT 1
+            """)
+    SpyCoefficientLedgerItem findLatestActiveByType(@Param("playerId") int playerId,
+                                                    @Param("roundId") int roundId,
+                                                    @Param("factorType") String factorType);
+
     @Select("SELECT COUNT(*) FROM spy_coefficient_ledger WHERE idempotency_key = #{idempotencyKey}")
     int countByIdempotencyKey(@Param("idempotencyKey") String idempotencyKey);
 }

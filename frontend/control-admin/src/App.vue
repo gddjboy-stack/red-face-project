@@ -253,7 +253,7 @@
             <p class="tip warning-text">8/1 当晚专用：把粉丝群投票结果录入系统。正数累加、负数冲销，同轮同选手可多次录入。提交前请核对群投票截图。</p>
             <el-form @submit.prevent label-width="100px">
               <el-form-item label="轮次">
-                <el-select v-model="groupVoteForm.roundId" filterable placeholder="请选择轮次" style="width: 220px" @change="refreshGroupVoteSummary">
+                <el-select v-model="groupVoteForm.roundId" filterable placeholder="请选择轮次" style="width: 220px" @change="onGroupVoteRoundChange">
                   <el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" />
                 </el-select>
               </el-form-item>
@@ -272,14 +272,187 @@
                 <el-button native-type="button" type="primary" :loading="groupVoteSubmitting" @click="submitGroupVote">确认录入</el-button>
               </div>
             </el-form>
+
+            <!--
+              C20-10 票数与参与人数矛盾的警告。标题必须明确说「已入账」：
+              若让运营误以为录入失败而重录一次，票数会直接翻倍。
+            -->
+            <el-alert v-if="groupVoteWarning" type="warning" :closable="true" show-icon
+                      class="mb-12" title="本笔票数已入账，但数据需核对"
+                      @close="groupVoteWarning = ''">
+              <p>{{ groupVoteWarning }}</p>
+            </el-alert>
+
+            <!-- ============ C20-10 投票参与人数 ============ -->
+            <div class="panel-title" style="margin-top: 12px;">投票参与人数（C20-10）</div>
+            <p class="tip warning-text">
+              参与人数是得票占比的<b>分母</b>，不是票数总和。
+              一人可能投多票或弃权，用票数总和作分母会得到「所有人占比加起来正好 100%」的假象。
+              <b>0 与未录入含义不同</b>：0 意为确实无人投票，未录入意为还没数。
+            </p>
+            <el-form @submit.prevent label-width="100px">
+              <el-form-item label="当前值">
+                <el-tag :type="voterCountValue === null ? 'warning' : 'success'">{{ voterCountDisplay }}</el-tag>
+                <span v-if="voterCountValue === null" class="tip" style="margin-left: 8px;">
+                  尚未录入，得票占比无法计算，请补录
+                </span>
+              </el-form-item>
+              <el-form-item label="参与人数">
+                <el-input-number v-model="voterCountForm.voterCount" :min="0" :step="1" :precision="0"
+                                 placeholder="现场清点人数" />
+              </el-form-item>
+              <el-form-item label="原因">
+                <el-input v-model="voterCountForm.reason" placeholder="例：群内清点 80 人参与" />
+              </el-form-item>
+              <p v-if="voterCountLooksTooSmall" class="tip" style="color: #e6a23c">
+                注意：本轮已有选手得票 {{ topVotesInRound }} 票，高于你填的参与人数，
+                提交后将要求二次确认。请先自行核对是否少数了人。
+              </p>
+              <div class="form-actions">
+                <el-button native-type="button" type="primary" :loading="voterCountSubmitting"
+                           @click="submitVoterCount(false)">录入参与人数</el-button>
+              </div>
+            </el-form>
+
+            <!--
+              needs_confirm 必须显式区别于「成功」：它代表<b>尚未写入</b>。
+              若与成功混同，现场会以为人数已改而不再确认，得票占比会一直算错。
+            -->
+            <el-alert v-if="voterCountConfirmReason" type="warning" :closable="false" show-icon
+                      class="mb-12" title="参与人数尚未写入，请核对后再确认">
+              <p>{{ voterCountConfirmReason }}</p>
+              <div class="form-actions">
+                <el-button native-type="button" type="danger" size="small" :loading="voterCountSubmitting"
+                           @click="submitVoterCount(true)">我已核对，确认写入</el-button>
+                <el-button native-type="button" size="small" @click="voterCountConfirmReason = ''">取消</el-button>
+              </div>
+            </el-alert>
+            <el-alert v-if="voterCountLastResult && voterCountLastResult.forcedOverConflict"
+                      type="error" :closable="false" show-icon class="mb-12"
+                      title="已强制写入，但数据仍不自洽">
+              当前参与人数小于本轮最高得票数，得票占比会超过 100%。
+              请尽快核对并修正（票数侧用<b>负数冲销</b>，不要直接重录）。
+            </el-alert>
+
             <div class="panel-title" style="margin-top: 12px;">本轮累计票数（冲销后净值）</div>
             <el-table :data="groupVoteSummary.items || []" size="small" height="220">
-              <el-table-column prop="playerNumber" label="序号" width="80" />
+              <el-table-column prop="playerNumber" label="序号" width="70" />
               <el-table-column prop="playerName" label="选手" />
-              <el-table-column prop="totalVotes" label="累计票数" width="110" />
-              <el-table-column prop="entryCount" label="录入笔数" width="100" />
+              <el-table-column prop="totalVotes" label="累计票数" width="100" />
+              <!--
+                占比为 null 时显示「——」而非 0%：
+                0% 会让场控以为无人投票，而事实是参与人数还没录。
+              -->
+              <el-table-column label="得票占比" width="100">
+                <template #default="{ row }">
+                  <span v-if="row.votePercent === null || row.votePercent === undefined" class="tip">——</span>
+                  <span v-else :style="row.votePercent > 100 ? 'color:#f56c6c;font-weight:600' : ''">
+                    {{ row.votePercent }}%
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column label="识破" width="90">
+                <template #default="{ row }">
+                  <el-tag v-if="row.exposed" type="danger" size="small">已识破</el-tag>
+                  <span v-else class="tip">—</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="entryCount" label="笔数" width="80" />
             </el-table>
-            <p class="tip">合计：{{ groupVoteSummary.totalVotes ?? 0 }} 票 · <el-button native-type="button" link type="primary" @click="refreshGroupVoteSummary">刷新</el-button></p>
+            <p class="tip">
+              合计：{{ groupVoteSummary.totalVotes ?? 0 }} 票 ·
+              参与人数：{{ voterCountDisplay }} ·
+              <el-button native-type="button" link type="primary" @click="refreshGroupVoteSummary">刷新</el-button>
+            </p>
+            <p class="tip warning-text">
+              合计票数与参与人数<b>不应相等也不应相减</b>：前者是投出的票，后者是参与的人。
+              占比总和不等于 100% 是正常现象（弃权或一人多票）。
+            </p>
+          </el-card>
+
+          <!-- ============ C20-10 卧底人气系数 ============ -->
+          <el-card class="panel-card">
+            <div class="panel-title">卧底人气系数（C20-10）</div>
+            <p class="tip warning-text">
+              系数是<b>乘法</b>而非加减：任务加成 ×1.3 后再被识破减半，结果是 ×0.65（不是 ×0.8）。
+              本区只影响<b>卧底人气</b>，不会动选手个人人气。与左侧「手动加成」是两回事，勿混用。
+            </p>
+            <el-form @submit.prevent label-width="100px">
+              <el-form-item label="轮次">
+                <el-tag v-if="groupVoteForm.roundId" type="info">轮次 {{ groupVoteForm.roundId }}（跟随左侧选择）</el-tag>
+                <span v-else class="tip warning-text">请先在左侧「群投票结果录入」选择轮次</span>
+              </el-form-item>
+              <el-form-item label="选手">
+                <el-select v-model="spyCoefForm.playerId" filterable clearable placeholder="请选择卧底选手"
+                           style="width: 220px" @change="refreshSpyCoef">
+                  <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="原因">
+                <el-input v-model="spyCoefForm.reason" placeholder="例：完成潜伏任务 / 被现场识破" />
+              </el-form-item>
+              <div class="form-actions">
+                <el-button native-type="button" type="warning" :loading="spyCoefSubmitting"
+                           @click="applySpyFactor('task_bonus')">任务加成 ×1.3</el-button>
+                <el-button native-type="button" type="danger" :loading="spyCoefSubmitting"
+                           @click="applySpyFactor('exposed_halve')">标记识破 ×0.5</el-button>
+                <el-button native-type="button" @click="refreshSpyCoef">刷新</el-button>
+              </div>
+            </el-form>
+
+            <template v-if="spyCoefView">
+              <!--
+                裸值与折算值必须并列：只看折算值无法判断「人气低」是因为集赞少还是因为被减半。
+              -->
+              <el-descriptions :column="2" border size="small" class="mb-12">
+                <el-descriptions-item label="当前系数">
+                  <b>{{ spyCoefView.coefficientLabel }}</b>
+                </el-descriptions-item>
+                <el-descriptions-item label="识破状态">
+                  <el-tag v-if="spyCoefView.exposed" type="danger" size="small">已识破</el-tag>
+                  <span v-else>未识破</span>
+                </el-descriptions-item>
+                <el-descriptions-item label="卧底人气（裸值）">
+                  {{ (spyCoefView.spyPopularityRaw ?? 0).toLocaleString() }}
+                </el-descriptions-item>
+                <el-descriptions-item label="卧底人气（折算后）">
+                  <b>{{ (spyCoefView.spyPopularityAdjusted ?? 0).toLocaleString() }}</b>
+                </el-descriptions-item>
+                <el-descriptions-item label="已施加任务加成" :span="2">
+                  {{ spyCoefView.taskBonusCount ?? 0 }} 次
+                  <span class="tip" style="margin-left: 8px;">
+                    （任务加成可多次施加，识破减半本轮只能一次）
+                  </span>
+                </el-descriptions-item>
+              </el-descriptions>
+
+              <div class="panel-title">系数账本（含已撑销条目）</div>
+              <p class="tip">
+                账本保留已撑销条目，否则无法解释系数为何变化。
+                撑销后系数从 ×1 起按剩余条目重新乘一遍（不做除法回退，整数除法不可逆）。
+              </p>
+              <el-table :data="spyCoefLedger" size="small" max-height="240">
+                <el-table-column prop="id" label="#" width="60" />
+                <el-table-column prop="factorTypeLabel" label="类型" width="110" />
+                <el-table-column prop="factorLabel" label="因子" width="80" />
+                <el-table-column prop="operatorId" label="操作人" width="100" />
+                <el-table-column prop="reason" label="原因" show-overflow-tooltip />
+                <el-table-column label="状态" width="90">
+                  <template #default="{ row }">
+                    <el-tag v-if="row.revoked" type="info" size="small">已撑销</el-tag>
+                    <el-tag v-else type="success" size="small">有效</el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="90">
+                  <template #default="{ row }">
+                    <el-button v-if="!row.revoked" native-type="button" link type="danger" size="small"
+                               @click="revokeSpyFactor(row)">撑销</el-button>
+                    <span v-else class="tip">—</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </template>
+            <p v-else class="tip">选择轮次与选手后，此处展示当前系数、折算前后人气与完整账本。</p>
           </el-card>
 
           <el-card class="panel-card">
@@ -982,7 +1155,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { calibrateWatermarks, distributeTeam, getAdminBoard, getAdminHome, getCalibrationCopy, getGroupVoteSummary, getLiveWatermarks, getSuspicionStatus, manualAdjust, previewMetricEntry, recordGroupVote, revokeCalibration, setCollectState, simulateInject, submitMetricEntry } from './api/admin'
+import { applySpyCoefficient, calibrateWatermarks, distributeTeam, getAdminBoard, getAdminHome, getCalibrationCopy, getGroupVoteSummary, getLiveWatermarks, getSpyCoefficient, getSuspicionStatus, getVoterCount, manualAdjust, previewMetricEntry, recordGroupVote, recordVoterCount, revokeCalibration, revokeSpyCoefficient, setCollectState, simulateInject, submitMetricEntry } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
 import { generateTokens, exportTokens } from './api/tokens'
@@ -1083,10 +1256,229 @@ const spyDialogTargetId = ref<number | null>(null)
 const groupVoteForm = reactive<{ roundId: number | null; playerId: number | null; votes: number | null; reason: string }>({ roundId: null, playerId: null, votes: null, reason: '' })
 const groupVoteSummary = ref<any>({ items: [], totalVotes: 0 })
 const groupVoteSubmitting = ref(false)
+/**
+ * C20-10 票数与参与人数矛盾的警告。非空并<b>不意味着录入失败</b>：
+ * 票已入账，只是数据需要核对。若界面把它呈现成失败，运营会再录一次，造成双倍票数。
+ */
+const groupVoteWarning = ref('')
 let groupVoteIdempotencyKey = generateGroupVoteKey()
 
 function generateGroupVoteKey() {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
+}
+
+/* ==================== C20-10 投票参与人数 ==================== */
+
+const voterCountForm = reactive<{ voterCount: number | null; reason: string }>({
+  voterCount: null,
+  reason: '现场清点投票人数'
+})
+/**
+ * 已录入的参与人数。`null` 意为<b>尚未录入</b>，与 0（确实无人投票）严格区分。
+ * 界面不得把 null 渲染成 0：那会让场控以为数据已齐而不去补录。
+ */
+const voterCountValue = ref<number | null>(null)
+const voterCountSubmitting = ref(false)
+/** 非空即表示「上一次提交尚未写入，正等待确认」。 */
+const voterCountConfirmReason = ref('')
+const voterCountLastResult = ref<any>(null)
+
+const voterCountDisplay = computed(() =>
+  voterCountValue.value === null ? '未录入' : `${voterCountValue.value} 人`
+)
+
+/**
+ * 本轮最高得票数，用于在提交前就提醒参与人数看上去偏小。
+ * 这不是拦截（真正的防线在服务端），而是让错误在点下按钮之前就被发现。
+ */
+const topVotesInRound = computed(() => {
+  const items = groupVoteSummary.value?.items || []
+  return items.reduce((max: number, i: any) => Math.max(max, Number(i.totalVotes) || 0), 0)
+})
+const voterCountLooksTooSmall = computed(() => {
+  const v = voterCountForm.voterCount
+  return typeof v === 'number' && Number.isFinite(v) && topVotesInRound.value > v
+})
+
+/**
+ * 提交参与人数。同手工销量的双提交范式：服务端返回 needs_confirm 时
+ * <b>尚未写入</b>，必须带 confirmed=true 再提一次。
+ */
+async function submitVoterCount(confirmed: boolean) {
+  if (groupVoteForm.roundId == null) {
+    ElMessage.warning('请先选择轮次')
+    return
+  }
+  const v = voterCountForm.voterCount
+  if (typeof v !== 'number' || !Number.isFinite(v) || !Number.isInteger(v) || v < 0) {
+    ElMessage.warning('参与人数必须是非负整数（0 表示确实无人投票）')
+    return
+  }
+  if (!voterCountForm.reason.trim()) {
+    ElMessage.warning('请填写原因，参与人数直接影响得票占比，必须可追溯到人')
+    return
+  }
+  voterCountSubmitting.value = true
+  try {
+    const result = await recordVoterCount(withOperator({
+      roundId: groupVoteForm.roundId,
+      voterCount: v,
+      reason: voterCountForm.reason.trim(),
+      confirmed
+    }))
+    voterCountLastResult.value = result
+    if (result?.status === 'needs_confirm') {
+      // 关键：此时尚未写入，不能提示成功。
+      voterCountConfirmReason.value = result.confirmReason || '请再次核对后确认'
+      return
+    }
+    voterCountConfirmReason.value = ''
+    ElMessage.success(`参与人数已录入：${result?.voterCountAfter ?? v} 人`)
+    await refreshVoterCount()
+    await refreshGroupVoteSummary()
+  } catch (error: any) {
+    ElMessage.error(error.message || '参与人数录入失败')
+  } finally {
+    voterCountSubmitting.value = false
+  }
+}
+
+async function refreshVoterCount() {
+  if (groupVoteForm.roundId == null) return
+  try {
+    const data = await getVoterCount(groupVoteForm.roundId)
+    // 不用 `?? null` 以外的写法：`|| null` 会把 0 变成 null，
+    // 把「确实无人投票」错报成「未录入」。
+    voterCountValue.value = data?.voterCount ?? null
+  } catch (error: any) {
+    ElMessage.error(error.message || '参与人数查询失败')
+  }
+}
+
+/* ==================== C20-10 卧底人气系数 ==================== */
+
+/** 任务加成的固定因子：130 = ×1.3。因子是<b>乘数</b>而非增量。 */
+const TASK_BONUS_FACTOR = 130
+
+const spyCoefForm = reactive<{ playerId: number | null; reason: string }>({
+  playerId: null,
+  reason: ''
+})
+const spyCoefView = ref<any>(null)
+const spyCoefSubmitting = ref(false)
+
+const spyCoefLedger = computed(() => spyCoefView.value?.ledger || [])
+
+function newSpyCoefKey() {
+  return `spy_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
+}
+
+async function refreshSpyCoef() {
+  if (spyCoefForm.playerId == null || groupVoteForm.roundId == null) {
+    spyCoefView.value = null
+    return
+  }
+  try {
+    spyCoefView.value = await getSpyCoefficient(spyCoefForm.playerId, groupVoteForm.roundId)
+  } catch (error: any) {
+    ElMessage.error(error.message || '卧底系数查询失败')
+  }
+}
+
+/**
+ * 施加系数。服务端四种终态必须分开呈现：
+ * applied 已生效 / duplicated 此前已生效（幂等拦截）/
+ * rejected <b>未生效</b> / revoked 已撑销。
+ * duplicated 与 rejected 含义相反，若混为一谈，现场会在「已生效」与「未生效」之间猜。
+ */
+async function applySpyFactor(factorType: 'task_bonus' | 'exposed_halve') {
+  if (spyCoefForm.playerId == null) {
+    ElMessage.warning('请先选择选手')
+    return
+  }
+  if (groupVoteForm.roundId == null) {
+    ElMessage.warning('请先选择轮次')
+    return
+  }
+  if (!spyCoefForm.reason.trim()) {
+    ElMessage.warning('请填写原因，系数变更直接改变卧底人气，必须可追溯')
+    return
+  }
+  const player = players.value.find((p) => p.playerId === spyCoefForm.playerId)
+  const who = player ? `${player.number}号 ${player.name}` : String(spyCoefForm.playerId)
+  const actionText = factorType === 'task_bonus' ? '任务加成 ×1.3' : '识破减半 ×0.5'
+  const current = spyCoefView.value?.coefficientLabel || '×1'
+  await ElMessageBox.confirm(
+    `确认对【${who}】施加${actionText}？\n` +
+    `当前系数 ${current}，施加后为乘法结果而非加减。`,
+    '卧底系数确认',
+    { type: 'warning' }
+  )
+  spyCoefSubmitting.value = true
+  try {
+    const result = await applySpyCoefficient(withOperator({
+      playerId: spyCoefForm.playerId,
+      roundId: groupVoteForm.roundId,
+      factor: factorType === 'task_bonus' ? TASK_BONUS_FACTOR : 50,
+      factorType,
+      reason: spyCoefForm.reason.trim(),
+      idempotencyKey: newSpyCoefKey()
+    }))
+    if (result?.status === 'rejected') {
+      // 未生效。用长驻留弹窗而非一闪而过的 toast：
+      // 拒绝理由里带着首次施加时间与操作人，是现场核对的唯一线索。
+      ElMessageBox.alert(result.rejectReason || '本次操作未生效', '未生效：操作被拒绝', {
+        type: 'error',
+        confirmButtonText: '我已知晓'
+      })
+    } else if (result?.status === 'duplicated') {
+      ElMessage.warning('重复提交已拦截（幂等），此前那一笔已生效，未重复乘算')
+    } else {
+      ElMessage.success(
+        `已施加：系数 ${result?.coefficientBeforeLabel ?? ''} → ${result?.coefficientLabel ?? ''}`
+      )
+    }
+    await refreshSpyCoef()
+    await refreshGroupVoteSummary()
+    await refreshMonitor()
+  } catch (error: any) {
+    if (error !== 'cancel') ElMessage.error(error.message || '卧底系数施加失败')
+  } finally {
+    spyCoefSubmitting.value = false
+  }
+}
+
+/** 撑销一条账本条目。服务端从 100 起按剩余条目重乘，不做除法回退。 */
+async function revokeSpyFactor(row: any) {
+  if (groupVoteForm.roundId == null || spyCoefForm.playerId == null) return
+  const { value: reason } = await ElMessageBox.prompt(
+    `撑销账本条目 #${row.id}（${row.factorTypeLabel || row.factorType} ${row.factorLabel || ''}）。\n` +
+    '撑销后系数将按剩余未撑销条目重新计算，请说明撑销原因：',
+    '撑销系数条目',
+    { inputPlaceholder: '例：识破标记错人，已与现场核对', type: 'warning' }
+  )
+  if (!reason || !reason.trim()) {
+    ElMessage.warning('撑销必须填写原因')
+    return
+  }
+  try {
+    const result = await revokeSpyCoefficient(withOperator({
+      ledgerId: row.id,
+      playerId: spyCoefForm.playerId,
+      roundId: groupVoteForm.roundId,
+      reason: reason.trim()
+    }))
+    if (result?.status === 'duplicated') {
+      ElMessage.info('该条目早已被撑销，未重复处理')
+    } else {
+      ElMessage.success(`已撑销，系数 ${result?.coefficientBeforeLabel ?? ''} → ${result?.coefficientLabel ?? ''}`)
+    }
+    await refreshSpyCoef()
+    await refreshGroupVoteSummary()
+    await refreshMonitor()
+  } catch (error: any) {
+    if (error !== 'cancel') ElMessage.error(error.message || '撑销失败')
+  }
 }
 
 function saveOperator() {
@@ -1562,6 +1954,14 @@ async function submitGroupVote() {
     } else {
       ElMessage.success(`录入成功，该选手本轮累计 ${outcome.currentTotalVotes ?? '-'} 票`)
     }
+    // C20-10 票数与参与人数矛盾时的警告。用长驻留弹窗而非 toast：
+    // 票<b>已经入账</b>，但数据不自洽，若提示一闪而过，现场不会回头核对，
+    // 最终大屏会打出超过 100% 的得票占比。
+    if (outcome.voterCountWarning) {
+      groupVoteWarning.value = outcome.voterCountWarning
+    } else {
+      groupVoteWarning.value = ''
+    }
     // 提交成功后更换幂等键并重置票数，保留轮次/选手方便连续录入
     groupVoteIdempotencyKey = generateGroupVoteKey()
     groupVoteForm.votes = null
@@ -1578,9 +1978,19 @@ async function refreshGroupVoteSummary() {
   if (groupVoteForm.roundId == null) return
   try {
     groupVoteSummary.value = await getGroupVoteSummary(groupVoteForm.roundId)
+    // C20-10 汇总响应自带 voterCount，直接同步，避免与单独查询的结果不一致。
+    voterCountValue.value = groupVoteSummary.value?.voterCount ?? null
   } catch (error: any) {
     ElMessage.error(error.message || '累计票数查询失败')
   }
+}
+
+/** C20-10 切换轮次时一并刷新参与人数与当前选手的卧底系数。 */
+async function onGroupVoteRoundChange() {
+  voterCountConfirmReason.value = ''
+  voterCountLastResult.value = null
+  await refreshGroupVoteSummary()
+  await refreshSpyCoef()
 }
 
 async function submitManualBonus() {

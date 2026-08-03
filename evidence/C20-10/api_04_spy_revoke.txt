@@ -1,0 +1,103 @@
+########## 17. 回显：裸值 205000 / 折算 133250 / 账本 2 条 ##########
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "status": "inspected",
+        "playerId": 1,
+        "roundId": 1,
+        "factorApplied": null,
+        "factorType": null,
+        "coefficientBefore": 65,
+        "coefficientAfter": 65,
+        "taskBonusCount": 1,
+        "exposed": true,
+        "rejectReason": null,
+        "revokedLedgerId": null,
+        "spyPopularityRaw": 205000,
+        "spyPopularityAdjusted": 133250,
+        "ledger": [
+            {
+                "id": 1,
+                "playerId": 1,
+                "roundId": 1,
+                "factor": 130,
+                "factorType": "task_bonus",
+                "operatorId": "vincent",
+                "reason": "\u5b8c\u6210\u6f5c\u4f0f\u4efb\u52a1",
+                "revoked": false,
+                "createdAt": "2026-08-03T22:49:04.418006",
+                "factorLabel": "\u00d71.3"
+            },
+            {
+                "id": 2,
+                "playerId": 1,
+                "roundId": 1,
+                "factor": 50,
+                "factorType": "exposed_halve",
+                "operatorId": "vincent",
+                "reason": "\u88ab\u73b0\u573a\u8bc6\u7834",
+                "revoked": false,
+                "createdAt": "2026-08-03T22:49:04.440118",
+                "factorLabel": "\u00d70.5"
+            }
+        ],
+        "coefficientLabel": "\u00d70.65"
+    }
+}
+
+########## 18. 撤销识破条目 #2：×0.65 → ×1.3 ##########
+###      实现为「从 ×1 起按剩余未撤销条目重乘」，而非除法回退
+###      因为整数百分比域内 65÷50 不可逆（65/0.5=130 恰好整除是巧合，×1.15 之类会失真）
+{"code":0,"message":"success","data":{"status":"revoked","playerId":1,"roundId":1,"factorApplied":null,"factorType":"exposed_halve","coefficientBefore":65,"coefficientAfter":130,"taskBonusCount":1,"exposed":false,"rejectReason":null,"revokedLedgerId":2,"spyPopularityRaw":null,"spyPopularityAdjusted":null,"ledger":null,"coefficientLabel":"×1.3"}}
+
+########## 19. 撤销后 exposed=false，折算值回 266500，账本留痕 revoked=true ##########
+{
+    "code": 0,
+    "message": "success",
+    "data": {
+        "status": "inspected",
+        "playerId": 1,
+        "roundId": 1,
+        "factorApplied": null,
+        "factorType": null,
+        "coefficientBefore": 130,
+        "coefficientAfter": 130,
+        "taskBonusCount": 1,
+        "exposed": false,
+        "rejectReason": null,
+        "revokedLedgerId": null,
+        "spyPopularityRaw": 205000,
+        "spyPopularityAdjusted": 266500,
+        "ledger": [
+            {
+                "id": 1,
+                "playerId": 1,
+                "roundId": 1,
+                "factor": 130,
+                "factorType": "task_bonus",
+                "operatorId": "vincent",
+                "reason": "\u5b8c\u6210\u6f5c\u4f0f\u4efb\u52a1",
+                "revoked": false,
+                "createdAt": "2026-08-03T22:49:04.418006",
+                "factorLabel": "\u00d71.3"
+            },
+            {
+                "id": 2,
+                "playerId": 1,
+                "roundId": 1,
+                "factor": 50,
+                "factorType": "exposed_halve",
+                "operatorId": "vincent",
+                "reason": "\u88ab\u73b0\u573a\u8bc6\u7834",
+                "revoked": true,
+                "createdAt": "2026-08-03T22:49:04.440118",
+                "factorLabel": "\u00d70.5"
+            }
+        ],
+        "coefficientLabel": "\u00d71.3"
+    }
+}
+
+########## 20. 撤销后允许重新施加识破 ##########
+{"code":0,"message":"success","data":{"status":"applied","playerId":1,"roundId":1,"factorApplied":50,"factorType":"exposed_halve","coefficientBefore":130,"coefficientAfter":65,"taskBonusCount":1,"exposed":false,"rejectReason":null,"revokedLedgerId":null,"spyPopularityRaw":null,"spyPopularityAdjusted":null,"ledger":null,"coefficientLabel":"×0.65"}}

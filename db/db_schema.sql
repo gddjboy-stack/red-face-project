@@ -37,7 +37,10 @@ CREATE TABLE player_round (
   round_id      INT NOT NULL,
   team_id       INT NULL COMMENT '本轮所属团队',
   is_spy        TINYINT(1) NOT NULL DEFAULT 0 COMMENT '本轮是否卧底',
-  spy_status    VARCHAR(20) NULL COMMENT 'hidden/revealed/exposed(被识破)',
+  -- C20-10（DEBT-003 僵尸字段）：本字段自建表起从未被写入。识破状态以
+  -- spy_coefficient_ledger 中 factor_type='exposed_halve' 的有效记录为唯一
+  -- 真相来源，请勿直接写入本列。
+  spy_status    VARCHAR(20) NULL COMMENT 'hidden/revealed/exposed(被识破)；已废弃从未写入，见DEBT-003',
   player_status VARCHAR(20) NOT NULL DEFAULT 'normal' COMMENT 'normal/free(自由人)/eliminated',
   PRIMARY KEY (player_id, round_id)
 ) ENGINE=InnoDB COMMENT='选手每轮的团队/卧底/状态';
