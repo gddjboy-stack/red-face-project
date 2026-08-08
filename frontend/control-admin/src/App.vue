@@ -1873,6 +1873,14 @@ async function submitDistribution() {
 }
 
 async function submitPlayer() {
+  if (!playerForm.name.trim()) {
+		ElMessageBox.alert('请输入选手姓名', '表单校验')
+		return
+	  }
+  if (!playerForm.displayCode.trim()) {
+    ElMessageBox.alert('请输入选手编号', '表单校验')
+    return
+  }
   await runAction('选手已新增', () => createPlayer(withOperator({ ...playerForm })), async () => {
     await refreshBasicData()
     resetPlayerForm()
@@ -1880,6 +1888,10 @@ async function submitPlayer() {
 }
 
 async function submitTeam() {
+ if (!teamForm.name.trim()) {
+    ElMessageBox.alert('请输入队伍名称', '表单校验')
+    return
+  }
   await runAction('队伍已新增', () => createTeam(withOperator({ ...teamForm })), async () => {
     await refreshBasicData()
     resetTeamForm()
@@ -1887,6 +1899,18 @@ async function submitTeam() {
 }
 
 async function submitRound() {
+ if (!roundForm.name.trim()) {
+    ElMessageBox.alert('请输入轮次名称', '表单校验')
+    return
+  }
+  if (!roundForm.startTime) {
+    ElMessageBox.alert('请选择开始时间', '表单校验')
+    return
+  }
+  if (!roundForm.endTime) {
+    ElMessageBox.alert('请选择结束时间', '表单校验')
+    return
+  }
   await runAction('轮次已新增', () => createRound(withOperator(roundForm)), refreshBasicData)
 }
 
@@ -2033,15 +2057,15 @@ async function activateRound(row: any) {
 
 async function submitPlayerRound() {
   if (playerRoundFilterRoundId.value == null) {
-    ElMessage.warning('请先在上方选择轮次')
+    ElMessageBox.alert('请先在上方选择轮次', '表单校验')
     return
   }
   if (playerRoundForm.playerId == null) {
-    ElMessage.warning('请选择选手')
+    ElMessageBox.alert('请选择选手', '表单校验')
     return
   }
   if (playerRoundForm.teamId == null) {
-    ElMessage.warning('请选择队伍')
+    ElMessageBox.alert('请选择队伍', '表单校验')
     return
   }
   const payload = { ...playerRoundForm, roundId: playerRoundFilterRoundId.value }
