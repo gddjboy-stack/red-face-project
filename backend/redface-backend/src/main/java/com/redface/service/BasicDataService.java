@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.redface.api.ApiException;
 import org.springframework.util.StringUtils;
 
 /**
@@ -43,18 +44,56 @@ public class BasicDataService {
     public BasicDataViews.PlayerView createPlayer(BasicDataRequests.CreatePlayerRequest request) {
         validateOperator(request.getOperatorId());
         validateText(request.getName(), "选手姓名不能为空");
-        if (request.getNumber() == null || request.getNumber() <= 0) {
-            throw new IllegalArgumentException("选手序号必须为正数");
+
+        // C20-12：编号（display_code）校验。允许为空；非空时必须是 4 位数字。
+        // 4 位含义：前 2 位轮次号 + 后 2 位选手号，例 0107 = 第 1 轮 7 号。
+        // 不做自动补零——运营填什么就存什么，避免"填的"与"存的"不一致。
+        String code = request.getDisplayCode();
+        if (code != null && !code.trim().isEmpty()) {
+            code = code.trim();
+            if (!code.matches("\\d{4}")) {
+                throw new ApiException(40001, "编号须为 4 位数字（前 2 位轮次 + 后 2 位号码），如 0107");
+            }
+            request.setDisplayCode(code);
+        } else {
+            request.setDisplayCode(null);
         }
+
         request.setStatus(normalizePlayerStatus(request.getStatus()));
-        try {
-            basicDataMapper.insertPlayer(request);
-        } catch (DuplicateKeyException e) {
-            throw new ApiException(40901, "序号" + request.getNumber() + "已被占用");
+
+        // C20-12：序号（number）由系统自动生成，前端不再传入。
+        // 序号是榜单 ORDER BY 键（去排名化合规依赖它），不对外暴露修改入口。
+        // 并发下 MAX+1 可能撞号，players.number 有唯一约束，故重试至多 3 次。
+        DuplicateKeyException lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            if (request.getNumber() == null || request.getNumber() <= 0) {
+                Integer maxNumber = basicDataMapper.findMaxPlayerNumber();
+                request.setNumber((maxNumber == null ? 0 : maxNumber) + 1);
+            }
+            try {
+                basicDataMapper.insertPlayer(request);
+                lastError = null;
+                break;
+            } catch (DuplicateKeyException e) {
+                lastError = e;
+                // 编号冲突不该重试（重试多少次都还是冲突），直接告知运营
+                if (request.getDisplayCode() != null
+                        && basicDataMapper.countPlayersByDisplayCode(request.getDisplayCode()) > 0) {
+                    throw new ApiException(40901, "编号" + request.getDisplayCode() + "已被占用，请更换");
+                }
+                // 序号冲突则清空后重新取号再试
+                request.setNumber(null);
+            }
         }
+        if (lastError != null) {
+            throw new ApiException(40901, "新增选手失败，请重试");
+        }
+
         BasicDataViews.PlayerView created = basicDataMapper.findPlayerById(request.getPlayerId());
         writeLog(request.getOperatorId(), "basic_create_player", "player:" + request.getPlayerId(),
-                "{\"name\":\"" + escape(request.getName()) + "\",\"number\":" + request.getNumber() + "}", "新增选手");
+                "{\"name\":\"" + escape(request.getName()) + "\",\"number\":" + request.getNumber()
+                        + ",\"displayCode\":\"" + escape(request.getDisplayCode() == null ? "" : request.getDisplayCode()) + "\"}",
+                "新增选手");
         return created;
     }
 

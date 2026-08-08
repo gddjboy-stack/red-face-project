@@ -16,21 +16,29 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface BasicDataMapper {
     @Select("""
-            SELECT player_id AS playerId, name, number, status, created_at AS createdAt, updated_at AS updatedAt
+            SELECT player_id AS playerId, name, number, display_code AS displayCode, status, created_at AS createdAt, updated_at AS updatedAt
             FROM players
             ORDER BY number ASC, player_id ASC
             """)
     List<BasicDataViews.PlayerView> findPlayers();
 
     @Insert("""
-            INSERT INTO players (name, number, status)
-            VALUES (#{name}, #{number}, #{status})
+            INSERT INTO players (name, number, display_code, status)
+            VALUES (#{name}, #{number}, #{displayCode}, #{status})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "playerId", keyColumn = "player_id")
     int insertPlayer(BasicDataRequests.CreatePlayerRequest request);
 
+    /** C20-12：取当前最大序号，用于自动生成下一个序号。表为空时返回 null。 */
+    @Select("SELECT MAX(number) FROM players")
+    Integer findMaxPlayerNumber();
+
+    /** C20-12：统计某编号是否已被占用，用于区分"序号冲突"与"编号冲突"。 */
+    @Select("SELECT COUNT(*) FROM players WHERE display_code = #{displayCode}")
+    int countPlayersByDisplayCode(@Param("displayCode") String displayCode);
+
     @Select("""
-            SELECT player_id AS playerId, name, number, status, created_at AS createdAt, updated_at AS updatedAt
+            SELECT player_id AS playerId, name, number, display_code AS displayCode, status, created_at AS createdAt, updated_at AS updatedAt
             FROM players
             WHERE player_id = #{playerId}
             """)
@@ -90,7 +98,7 @@ public interface BasicDataMapper {
             UPDATE rounds
             SET status = 'completed'
             WHERE status = 'active'
-              AND round_id <> #{roundId}
+            AND round_id <> #{roundId}
             """)
     int completeOtherActiveRounds(@Param("roundId") int roundId);
 
@@ -114,6 +122,7 @@ public interface BasicDataMapper {
     @Select("""
             SELECT p.player_id AS playerId,
                    p.number AS number,
+                   p.display_code AS displayCode,
                    p.name AS playerName,
                    r.round_id AS roundId,
                    r.name AS roundName,

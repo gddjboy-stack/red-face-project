@@ -480,7 +480,8 @@
             <div class="panel-title">选手管理</div>
             <el-form @submit.prevent inline>
               <el-form-item label="姓名"><el-input v-model="playerForm.name" /></el-form-item>
-              <el-form-item label="编号"><el-input v-model="playerForm.displayCode" placeholder="4位数字" /></el-form-item>
+              <el-form-item label="编号"><el-input v-model="playerForm.displayCode" placeholder="4位数字，如0107" /></el-form-item>
+              <div style="margin: -10px 0 12px 0; font-size: 12px; color: #909399;">编号 = 前2位轮次 + 后2位选手号。例：第1轮7号选手填 0107。系统不会自动补零。</div>
               <el-form-item><el-button native-type="button" type="primary" @click="submitPlayer">新增选手</el-button></el-form-item>
             </el-form>
             <el-table :data="players" size="small" height="260">
