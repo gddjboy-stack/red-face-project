@@ -20,7 +20,13 @@ export function simulateInject(data: any) {
   return jsonPost<any>('/api/admin/live/simulate', data)
 }
 
+/** 手动调分（人气值直接增减）。后端端点 /popularity/manual-adjust，DTO 字段 rawValue。 */
 export function manualAdjust(data: any) {
+  return jsonPost<any>('/api/admin/popularity/manual-adjust', data)
+}
+
+/** 手动加成（player/team 系数增量）。后端端点 /adjust-coefficient，DTO 字段 delta。 */
+export function adjustCoefficient(data: any) {
   return jsonPost<any>('/api/admin/adjust-coefficient', data)
 }
 

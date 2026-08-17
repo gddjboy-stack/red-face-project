@@ -50,6 +50,17 @@ class PopularityBoardControllerC9Test extends C9MockMvcSupport {
     }
 
     @Test
+    void playerBoardShouldApplyCoefficientToPopularity() throws Exception {
+        // 手动加成后 coefficient 应参与选手榜折算（与团队榜同一范式）。
+        // 1 号选手裸人气 100，系数改 200（×2.0）→ 选手榜应显示 200。
+        jdbcTemplate.update("UPDATE player_round_stats SET coefficient = 200 WHERE player_id = 1 AND round_id = 1");
+        mockMvc.perform(get("/api/popularity/board").param("tab", "player").param("roundId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].number").value(1))
+                .andExpect(jsonPath("$.data.items[0].value").value(200L));
+    }
+
+    @Test
     void teamBoardShouldSortByTeamIdAscNotPopularityValue() throws Exception {
         mockMvc.perform(get("/api/popularity/board").param("tab", "team").param("roundId", "1"))
                 .andExpect(status().isOk())

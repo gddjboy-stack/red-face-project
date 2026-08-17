@@ -153,8 +153,9 @@
               </el-table-column>
               <el-table-column label="本次中控台总数" width="210">
                 <template #default="{ row }">
+                  <!-- 原限制已注释（team/pool 下礼物不可录入）：:disabled="row.metricType === 'gift' && !giftAttributable" -->
                   <el-input-number v-model="row.currentTotal" :min="0" :controls="false" style="width: 150px"
-                    :disabled="row.metricType === 'gift' && !giftAttributable" @change="onMetricInput(row)" />
+                    @change="onMetricInput(row)" />
                 </template>
               </el-table-column>
               <el-table-column label="本次增量预览">
@@ -459,13 +460,22 @@
             <div class="panel-title">手动加成</div>
             <el-form @submit.prevent label-width="80px">
               <el-form-item label="目标类型">
-                <el-select v-model="bonusForm.targetType">
+                <el-select v-model="bonusForm.targetType" @change="onBonusTypeChange">
                   <el-option label="选手 player" value="player" />
                   <el-option label="团队 team" value="team" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="目标 ID"><el-input-number v-model="bonusForm.targetId" :min="1" /></el-form-item>
-              <el-form-item label="轮次 ID"><el-input-number v-model="bonusForm.roundId" :min="1" /></el-form-item>
+              <el-form-item label="目标">
+                <el-select v-model="bonusForm.targetId" filterable clearable placeholder="请选择目标" style="width: 220px">
+                  <template v-if="bonusForm.targetType === 'player'">
+                    <el-option v-for="p in players" :key="p.playerId" :label="`${p.number}号 ${p.name}`" :value="p.playerId" />
+                  </template>
+                  <template v-else-if="bonusForm.targetType === 'team'">
+                    <el-option v-for="t in teams" :key="t.teamId" :label="t.name" :value="t.teamId" />
+                  </template>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="轮次"><el-select v-model="bonusForm.roundId" filterable placeholder="请选择轮次" style="width: 220px"><el-option v-for="r in rounds" :key="r.roundId" :label="`[${r.roundId}] ${r.name}`" :value="r.roundId" /></el-select></el-form-item>
               <el-form-item label="加成变动"><el-input-number v-model="bonusForm.delta" :min="-100" :max="100" placeholder="±10代表±0.1" /></el-form-item>
               <el-form-item label="原因"><el-input v-model="bonusForm.reason" /></el-form-item>
               <div class="form-actions"><el-button native-type="button" type="warning" @click="submitManualBonus">确认加成</el-button></div>
@@ -1156,7 +1166,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { applySpyCoefficient, calibrateWatermarks, distributeTeam, getAdminBoard, getAdminHome, getCalibrationCopy, getGroupVoteSummary, getLiveWatermarks, getSpyCoefficient, getSuspicionStatus, getVoterCount, manualAdjust, previewMetricEntry, recordGroupVote, recordVoterCount, revokeCalibration, revokeSpyCoefficient, setCollectState, simulateInject, submitMetricEntry } from './api/admin'
+import { adjustCoefficient, applySpyCoefficient, calibrateWatermarks, distributeTeam, getAdminBoard, getAdminHome, getCalibrationCopy, getGroupVoteSummary, getLiveWatermarks, getSpyCoefficient, getSuspicionStatus, getVoterCount, manualAdjust, previewMetricEntry, recordGroupVote, recordVoterCount, revokeCalibration, revokeSpyCoefficient, setCollectState, simulateInject, submitMetricEntry } from './api/admin'
 import { createPlayer, createRound, createTeam, listPlayerRounds, listPlayers, listRounds, listTeams, savePlayerRound, updateRoundStatus } from './api/basicData'
 import { listPhotos, replacePhoto, setPhotoCover, updatePhotoStatus, uploadPhoto } from './api/photos'
 import { generateTokens, exportTokens } from './api/tokens'
@@ -1236,7 +1246,7 @@ const playerRoundFilterRoundId = ref<number | null>(null)
 const collectForm = reactive<{ mode: string; targetId: number | null; roundId: number | null }>({ mode: 'player', targetId: null, roundId: null })
 const simulateForm = reactive<{ eventType: string; value: number; targetId: number | null }>({ eventType: 'like_delta', value: 10, targetId: null })
 const manualForm = reactive<{ targetType: string; targetId: number | null; roundId: number | null; rawValue: number; reason: string }>({ targetType: 'player', targetId: null, roundId: null, rawValue: 100, reason: '彩排手动调分' })
-const bonusForm = reactive({ targetType: 'player', targetId: 1, roundId: 1, delta: 10, reason: '' })
+const bonusForm = reactive<{ targetType: string; targetId: number | null; roundId: number | null; delta: number; reason: string }>({ targetType: 'player', targetId: null, roundId: null, delta: 10, reason: '' })
 const distributionForm = reactive<{ teamId: number | null; roundId: number | null; method: string; reason: string }>({ teamId: null, roundId: null, method: 'equal', reason: '彩排团队均分' })
 const playerForm = reactive<{ name: string; displayCode: string }>({ name: '', displayCode: '' })
 const teamForm = reactive({ name: '' })
@@ -1538,6 +1548,7 @@ function applyDefaultRound() {
   if (manualForm.roundId == null) manualForm.roundId = fallbackId
   if (distributionForm.roundId == null) distributionForm.roundId = fallbackId
   if (groupVoteForm.roundId == null) groupVoteForm.roundId = fallbackId
+  if (bonusForm.roundId == null) bonusForm.roundId = fallbackId
 }
 
 /** 切换集赞模式时清空旧目标，避免选手 ID 被错当成团队 ID 提交（Claude 裁定要求）。 */
@@ -1548,6 +1559,11 @@ function onCollectModeChange() {
 /** 切换手动调分目标类型时清空旧目标，防止目标值串用（Claude 裁定要求）。 */
 function onManualTypeChange() {
   manualForm.targetId = null
+}
+
+/** 切换手动加成目标类型时清空旧目标，防止目标值串用（与手动调分同理）。 */
+function onBonusTypeChange() {
+  bonusForm.targetId = null
 }
 
 async function refreshPlayerRounds() {
@@ -2019,9 +2035,17 @@ async function onGroupVoteRoundChange() {
 }
 
 async function submitManualBonus() {
+  if (bonusForm.roundId == null) {
+    ElMessage.warning('请选择轮次')
+    return
+  }
+  if (bonusForm.targetId == null) {
+    ElMessage.warning('请选择目标')
+    return
+  }
   await ElMessageBox.confirm(`确认给 ${bonusForm.targetType} ${bonusForm.targetId} 增加系数 ${bonusForm.delta}？`, '加成确认', { type: 'warning' })
   const idempotencyKey = `bonus_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-  await runAction('加成成功', () => manualAdjust(withOperator({
+  await runAction('加成成功', () => adjustCoefficient(withOperator({
     ...bonusForm,
     idempotencyKey
   })), refreshMonitor)

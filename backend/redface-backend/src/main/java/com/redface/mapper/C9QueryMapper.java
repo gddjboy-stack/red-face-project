@@ -42,11 +42,16 @@ public interface C9QueryMapper {
     @Select("SELECT name FROM teams WHERE team_id = #{teamId}")
     String findTeamName(@Param("teamId") int teamId);
 
+    /**
+     * 选手榜。与团队榜同一范式：账本存裸人气值，读取时乘上 {@code coefficient} 折算。
+     * {@code COALESCE(prs.coefficient, 100)} 保证 LEFT JOIN 未命中（无 stats 行）时按 1.0 处理，
+     * 否则未建 stats 行的选手人气会被误归零。
+     */
     @Select("""
             SELECT p.number AS number,
                    p.name AS name,
                    t.name AS teamName, pr.is_spy AS isSpy,
-                   COALESCE(prs.individual_popularity, 0) AS popularityValue
+                   CAST(COALESCE(prs.individual_popularity, 0) * COALESCE(prs.coefficient, 100) / 100 AS SIGNED) AS popularityValue
             FROM player_round pr
             JOIN players p ON p.player_id = pr.player_id
             LEFT JOIN teams t ON t.team_id = pr.team_id
